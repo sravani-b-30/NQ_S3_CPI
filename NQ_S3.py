@@ -297,7 +297,7 @@ def load_static_file_from_s3(file_name):
     """Loads a static CSV file from S3 without searching for latest version."""
     s3_key = f"{s3_folder}{file_name}"
     obj = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
-    return pd.read_csv(obj['Body'], low_memory=False)
+    return pd.read_csv(obj['Body'], low_memory=False, on_bad_lines='skip')
 
 @st.cache_data
 def load_and_preprocess_data():

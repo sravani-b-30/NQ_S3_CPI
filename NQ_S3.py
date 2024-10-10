@@ -293,6 +293,12 @@ def load_latest_csv_from_s3(prefix):
     obj = s3_client.get_object(Bucket=bucket_name, Key=latest_file_key)
     return pd.read_csv(obj['Body'], low_memory=False)
 
+def load_static_file_from_s3(file_name):
+    """Loads a static CSV file from S3 without searching for latest version."""
+    s3_key = f"{s3_folder}{file_name}"
+    obj = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
+    return pd.read_csv(obj['Body'], low_memory=False)
+
 @st.cache_data
 def load_and_preprocess_data():
     asin_keyword_df = load_latest_csv_from_s3('asin_keyword_id_mapping')
@@ -302,7 +308,7 @@ def load_and_preprocess_data():
     #st.write("Loaded asin_keyword_df from S3 (static):", asin_keyword_df.head())
     #st.write("Loaded keyword_id_df from S3 (static):", keyword_id_df.head())
     
-    df_scrapped = pd.read_csv("NAPQUEEN.csv", on_bad_lines='skip')
+    df_scrapped = load_static_file_from_s3('NAPQUEEN.csv')
     df_scrapped['ASIN'] = df_scrapped['ASIN'].str.upper()
     df_scrapped_cleaned = df_scrapped.drop_duplicates(subset='ASIN')
 

@@ -322,7 +322,7 @@ def load_and_preprocess_data():
     # Debugging: Check merged_data_df after renaming and modifying 'asin'
     #st.write("Loaded merged_data_df with latest date (dynamic):", merged_data_df.head())
     
-    price_data_df = pd.read_csv("Sep9_oct9_SP_SB_SD.csv", on_bad_lines='skip')
+    price_data_df = load_latest_csv_from_s3('napqueen_price_tracker')
     
     # Debugging: Check price_data_df after loading
     #st.write("Loaded price_data_df with latest date (dynamic):", price_data_df.head())

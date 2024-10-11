@@ -864,7 +864,7 @@ def calculate_and_plot_cpi(merged_data_df, price_data_df, asin_list, start_date,
     price_data_df_filtered = price_data_df[price_data_df['Ad Type'] == 'SP']
     napqueen_df = price_data_df_filtered
     #napqueen_df['Date'] = pd.to_datetime(napqueen_df['Date'], format='%d-%m-%Y', errors='coerce')
-    napqueen_df = napqueen_df.rename(columns={'asin': 'ASIN'})
+    napqueen_df = napqueen_df.rename(columns={'asin': 'ASIN', 'date' : 'Date'})
 
     # Clean and ensure consistent data in ASIN columns
     result_df['ASIN'] = result_df['ASIN'].str.upper().str.strip()  # Convert to uppercase and remove spaces

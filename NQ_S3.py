@@ -644,6 +644,40 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     asin_list = [p[0] for p in similar_products]
     #sizes = [p[7].get('Size', 'N/A') for p in similar_products]
     #styles = [p[7].get('Style', 'N/A') for p in similar_products]
+
+    # Extract details for each competitor for CSV creation
+    competitor_data = []
+
+    # Loop through each similar product and collect relevant details
+    for product in similar_products:
+        asin = product[0]
+        title = product[1]
+        price = product[2]
+        brand = product[11] 
+        
+        # Extract matching features
+        matching_features = {feature: product[7].get(feature, 'N/A') for feature in compulsory_features}  # Assuming product[7] holds product details
+
+        # Add data to list for CSV creation
+        competitor_data.append({
+            'ASIN': asin,
+            'Title': title,
+            'Price': price,
+            'Brand': brand,
+            'Matching Features': matching_features
+        })
+
+    # Create DataFrame for competitor data
+    competitor_df = pd.DataFrame(competitor_data)
+
+    # Save as CSV and create download link
+    csv_data = competitor_df.to_csv(index=False)
+    st.download_button(
+        label="Download Competitor Data CSV",
+        data=csv_data,
+        file_name=f"competitors_scatter_plot_{asin}.csv",
+        mime='text/csv'
+    )
     
     # Plot using Plotly
     fig = go.Figure()

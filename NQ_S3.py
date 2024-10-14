@@ -625,7 +625,7 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     similar_products = find_similar_products(asin, price_min, price_max, merged_data_df, compulsory_features, same_brand_option, compulsory_keywords)
     
     # Debugging line to check structure
-    st.write("Similar Products Structure:", similar_products)
+    #st.write("Similar Products Structure:", similar_products)
 
     # Retrieve target product information
     target_product = merged_data_df[merged_data_df['ASIN'] == asin].iloc[0]

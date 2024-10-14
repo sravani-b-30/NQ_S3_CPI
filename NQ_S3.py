@@ -318,7 +318,7 @@ def load_and_preprocess_data():
 
     # Load dynamic files with latest dates
     merged_data_df = load_latest_csv_from_s3('merged_data_')
-    st.write("Latest merged_data file name loaded:", merged_data_df)
+    st.write("Latest merged_data file name loaded:", merged_data_df.head())
     merged_data_df = merged_data_df.rename(columns={"ASIN": "asin", "title": "product_title"})
     merged_data_df['asin'] = merged_data_df['asin'].str.upper()
     merged_data_df['ASIN'] = merged_data_df['asin']

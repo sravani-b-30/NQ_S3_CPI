@@ -664,7 +664,7 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
         asin = product[0]
         title = product[1]
         price = product[2]
-        brand = product[11] 
+        #brand = product[11] 
         
         # Extract matching features
         matching_features = {feature: product[7].get(feature, 'N/A') for feature in compulsory_features}  # Assuming product[7] holds product details
@@ -674,7 +674,7 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
             'ASIN': asin,
             'Title': title,
             'Price': price,
-            'Brand': brand,
+            #'Brand': brand,
             'Matching Features': matching_features
         })
 

@@ -320,7 +320,7 @@ def load_and_preprocess_data():
     merged_data_df['price'] = pd.to_numeric(merged_data_df['price'], errors='coerce')
     merged_data_df = pd.merge(df_scrapped_cleaned, merged_data_df[['asin','product_title', 'price', 'date']], left_on='ASIN', right_on='asin', how='left')
     # Debugging: Check merged_data_df after renaming and modifying 'asin'
-    #st.write("Loaded merged_data_df with latest date (dynamic):", merged_data_df.head())
+    st.write("Loaded merged_data_df with latest date (dynamic):", merged_data_df.head())
     
     price_data_df = load_latest_csv_from_s3('napqueen_price_tracker')
     

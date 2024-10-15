@@ -1194,7 +1194,8 @@ same_brand_option = st.radio(
     "Same Brand Option",
     options=['all', 'only', 'omit'],
     index=['all', 'only', 'omit'].index(st.session_state['same_brand_option']),
-    on_change=update_recompute_flag
+    on_change=update_recompute_flag,
+    key="same_brand_option_key" 
 )
 
 # Add the session state clearing logic at the beginning of the app

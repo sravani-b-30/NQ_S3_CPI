@@ -322,9 +322,13 @@ def load_and_preprocess_data():
     merged_data_df = merged_data_df.rename(columns={"ASIN": "asin", "title": "product_title"})
     merged_data_df['asin'] = merged_data_df['asin'].str.upper()
     merged_data_df['ASIN'] = merged_data_df['asin']
+
+    missing_brand_mask = merged_data_df['brand'].isna() | (merged_data_df['brand'] == "")
+    merged_data_df.loc[missing_brand_mask, 'brand'] = merged_data_df.loc[missing_brand_mask, 'product_title'].apply(extract_brand_from_title)
+    
     st.write("Loaded and processed merged_data_df:", merged_data_df.head())
     merged_data_df['price'] = pd.to_numeric(merged_data_df['price'], errors='coerce')
-    merged_data_df = pd.merge(df_scrapped_cleaned, merged_data_df[['asin','product_title', 'price', 'date']], left_on='ASIN', right_on='asin', how='left')
+    merged_data_df = pd.merge(df_scrapped_cleaned, merged_data_df[['asin', 'brand', 'product_title', 'price', 'date']], left_on='ASIN', right_on='asin', how='left')
     st.write("Merged df_scrapped_cleaned with merged_data_df:", merged_data_df.head())
     # Debugging: Check merged_data_df after renaming and modifying 'asin'
     #st.write("Loaded merged_data_df with latest date (dynamic):", merged_data_df.head())
@@ -456,12 +460,12 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
     else:
         similar_asin_list = []  # No filtering based on ASINs if "No Keywords" is selected
 
-    merged_data_df['identified_brand'] = merged_data_df['product_title'].apply(extract_brand_from_title)
+    #merged_data_df['identified_brand'] = merged_data_df['product_title'].apply(extract_brand_from_title)
 
     target_product = merged_data_df[merged_data_df['ASIN'] == asin].iloc[0]
     target_details = {**target_product['Product Details'], **target_product['Glance Icon Details']}
 
-    target_brand = target_product['identified_brand']
+    target_brand = target_product['brand']
     target_title = str(target_product['product_title']).lower()
     target_desc = str(target_product['Description']).lower()
 
@@ -472,7 +476,7 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
     for index, row in merged_data_df.iterrows():
         if row['ASIN'] == asin:
             continue
-        compare_brand = row['identified_brand']
+        compare_brand = row['brand']
         if same_brand_option == 'only' and compare_brand != target_brand:
             continue
         if same_brand_option == 'omit' and compare_brand == target_brand:
@@ -632,7 +636,7 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     target_title = str(target_product['product_title']).lower()
     target_desc = str(target_product['Description']).lower()
     target_details = target_product['Product Details']
-
+    
     # Calculate similarity scores for the target product
     details_score, title_score, desc_score, details_comparison, title_comparison, desc_comparison = calculate_similarity(
         target_details, target_details, target_title, target_title, target_desc, target_desc

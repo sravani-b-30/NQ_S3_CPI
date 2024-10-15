@@ -1149,38 +1149,53 @@ def clear_session_state_on_date_change():
             st.session_state['prev_start_date'] = start_date
             st.session_state['prev_end_date'] = end_date
 
+# Initialize input session states only if they are not already set
+if 'asin' not in st.session_state:
+    st.session_state['asin'] = ""
+if 'price_min' not in st.session_state:
+    st.session_state['price_min'] = 0.00
+if 'price_max' not in st.session_state:
+    st.session_state['price_max'] = 0.00
+if 'target_price' not in st.session_state:
+    st.session_state['target_price'] = 0.00
+if 'start_date' not in st.session_state:
+    st.session_state['start_date'] = None
+if 'end_date' not in st.session_state:
+    st.session_state['end_date'] = None
+if 'same_brand_option' not in st.session_state:
+    st.session_state['same_brand_option'] = 'all'
+if 'compulsory_features' not in st.session_state:
+    st.session_state['compulsory_features'] = []
+if 'recompute' not in st.session_state:
+    st.session_state['recompute'] = False
+
+# Define a function to set the recompute flag when any input changes
+def update_recompute_flag():
+    st.session_state['recompute'] = True
+
 # Streamlit UI for ASIN Competitor Analysis
 st.title("ASIN Competitor Analysis")
 
-# Create columns to use horizontal space
-col1, col2, col3 = st.columns(3)
+# Input fields with on_change callback to set recompute flag
+asin = st.text_input("Enter ASIN", value=st.session_state['asin'], on_change=update_recompute_flag)
+price_min = st.number_input("Price Min", value=st.session_state['price_min'], on_change=update_recompute_flag)
+price_max = st.number_input("Price Max", value=st.session_state['price_max'], on_change=update_recompute_flag)
+target_price = st.number_input("Target Price", value=st.session_state['target_price'], on_change=update_recompute_flag)
 
-# Input fields for ASIN and price range
-with col1:
-    asin = st.text_input("Enter ASIN").upper()
-
-with col2:
-    price_min = st.number_input("Price Min", value=0.00)
-
-with col3:
-    price_max = st.number_input("Price Max", value=0.00)
-
-# Target price input
-target_price = st.number_input("Target Price", value=0.00)
-
-# Checkbox for including time-series analysis, placed directly after Target Price
-include_dates = st.checkbox("Include Dates for Time-Series Analysis", value=True)
-
-# Display empty date inputs if the user opts to include dates
-if include_dates:
-    col4, col5 = st.columns(2)
-    with col4:
-        start_date = st.date_input("Start Date", value=None)  # Ensure default is empty
-    with col5:
-        end_date = st.date_input("End Date", value=None)  # Ensure default is empty
+# Date input fields, with conditional display for analysis
+if st.checkbox("Include Dates for Time-Series Analysis", value=True):
+    start_date = st.date_input("Start Date", value=st.session_state['start_date'], on_change=update_recompute_flag)
+    end_date = st.date_input("End Date", value=st.session_state['end_date'], on_change=update_recompute_flag)
 else:
     start_date, end_date = None, None
 
+# Same brand option radio buttons
+same_brand_option = st.radio(
+    "Same Brand Option",
+    options=['all', 'only', 'omit'],
+    index=['all', 'only', 'omit'].index(st.session_state['same_brand_option']),
+    on_change=update_recompute_flag
+)
 
 # Add the session state clearing logic at the beginning of the app
 clear_session_state_on_date_change()
@@ -1204,16 +1219,20 @@ if st.button("Show Features"):
 if st.session_state['show_features_clicked'] and asin in merged_data_df['ASIN'].values:
     show_features(asin)
 
-# Automatically display checkboxes for each product detail feature (if ASIN exists)
+# Select compulsory features based on ASIN product details
 compulsory_features_vars = {}
 if asin in merged_data_df['ASIN'].values:
     product_details = merged_data_df[merged_data_df['ASIN'] == asin].iloc[0]['Product Details']
     st.write("Select compulsory features:")
     for feature in product_details.keys():
-        compulsory_features_vars[feature] = st.checkbox(f"Include {feature}", key=f"checkbox_{feature}")
+        compulsory_features_vars[feature] = st.checkbox(
+            f"Include {feature}",
+            value=feature in st.session_state['compulsory_features'],
+            on_change=update_recompute_flag
+        )
 
 # Collect selected compulsory features
-compulsory_features = [feature for feature, selected in compulsory_features_vars.items() if selected]
+st.session_state['compulsory_features'] = [feature for feature, selected in compulsory_features_vars.items() if selected]
 
 # Load keyword mapping
 keyword_mapping = load_keyword_mapping(keyword_id_df)
@@ -1280,49 +1299,21 @@ def get_selected_keyword_ids():
     # Simply return the keyword IDs stored in session state
     return st.session_state.get('selected_keyword_ids', [])
 
-# Store input values in session state for use in re-runs
-if 'asin_list' not in st.session_state:
-    st.session_state['asin_list'] = [asin]
-if 'price_min' not in st.session_state:
-    st.session_state['price_min'] = price_min
-if 'price_max' not in st.session_state:
-    st.session_state['price_max'] = price_max
-if 'target_price' not in st.session_state:
-    st.session_state['target_price'] = target_price
-if 'start_date' not in st.session_state:
-    st.session_state['start_date'] = start_date
-if 'end_date' not in st.session_state:
-    st.session_state['end_date'] = end_date
-if 'compulsory_features' not in st.session_state:
-    st.session_state['compulsory_features'] = compulsory_features
-if 'same_brand_option' not in st.session_state:
-    st.session_state['same_brand_option'] = same_brand_option
-if 'recompute' not in st.session_state:
-    st.session_state['recompute'] = False  # Set up the recompute flag
-
-# Button to trigger re-run
-def reset_cache():
-    # Set the recompute flag to True when this function is called
-    st.session_state["recompute"] = True
-
-# Display button to trigger analysis re-run and set recompute flag
-st.button("Analyze", on_click=reset_cache)
-
-# Check if the recompute flag is set and run analysis if it is
-if st.session_state.get("recompute", False):
-    # Load data and run analysis
-    asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = load_and_preprocess_data()
-    
+# Button to trigger analysis
+if st.button("Analyze") or st.session_state.get('recompute', False):
+    # Run the analysis function
     run_analysis_button(
-        merged_data_df, price_data_df, st.session_state["asin_list"][0], 
-        st.session_state["price_min"], st.session_state["price_max"], 
-        st.session_state["target_price"], st.session_state["start_date"], 
-        st.session_state["end_date"], st.session_state["same_brand_option"], 
-        st.session_state["compulsory_features"]
+        merged_data_df,
+        price_data_df,
+        asin,
+        price_min,
+        price_max,
+        target_price,
+        start_date,
+        end_date,
+        same_brand_option,
+        st.session_state['compulsory_features']
     )
     
-    # Reset recompute flag after analysis completes
-    st.session_state["recompute"] = False
-
-else:
-    st.write("Adjust parameters and click 'Analyze' to update.")
+    # Reset the recompute flag after analysis
+    st.session_state['recompute'] = False

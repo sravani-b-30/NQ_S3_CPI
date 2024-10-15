@@ -1295,6 +1295,32 @@ if 'compulsory_features' not in st.session_state:
     st.session_state['compulsory_features'] = compulsory_features
 if 'same_brand_option' not in st.session_state:
     st.session_state['same_brand_option'] = same_brand_option
+if 'recompute' not in st.session_state:
+    st.session_state['recompute'] = False  # Set up the recompute flag
 
-if st.button("Analyze"):
-    run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_max, target_price, start_date, end_date, same_brand_option, compulsory_features)
+# Button to trigger re-run
+def reset_cache():
+    # Set the recompute flag to True when this function is called
+    st.session_state["recompute"] = True
+
+# Display button to trigger analysis re-run and set recompute flag
+st.button("Analyze", on_click=reset_cache)
+
+# Check if the recompute flag is set and run analysis if it is
+if st.session_state.get("recompute", False):
+    # Load data and run analysis
+    asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = load_and_preprocess_data()
+    
+    run_analysis_button(
+        merged_data_df, price_data_df, st.session_state["asin_list"][0], 
+        st.session_state["price_min"], st.session_state["price_max"], 
+        st.session_state["target_price"], st.session_state["start_date"], 
+        st.session_state["end_date"], st.session_state["same_brand_option"], 
+        st.session_state["compulsory_features"]
+    )
+    
+    # Reset recompute flag after analysis completes
+    st.session_state["recompute"] = False
+
+else:
+    st.write("Adjust parameters and click 'Analyze' to update.")

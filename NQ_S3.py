@@ -1287,6 +1287,8 @@ if 'price_min' not in st.session_state:
     st.session_state['price_min'] = price_min
 if 'price_max' not in st.session_state:
     st.session_state['price_max'] = price_max
+if 'target_price' not in st.session_state:
+    st.session_state['target_price'] = target_price
 if 'start_date' not in st.session_state:
     st.session_state['start_date'] = start_date
 if 'end_date' not in st.session_state:

@@ -1201,9 +1201,6 @@ same_brand_option = st.radio(
 # Add the session state clearing logic at the beginning of the app
 clear_session_state_on_date_change()
 
-# Radio buttons for same brand option
-same_brand_option = st.radio("Same Brand Option", ('all', 'only', 'omit'))
-
 # Initialize session state for button click tracking
 if 'show_features_clicked' not in st.session_state:
     st.session_state['show_features_clicked'] = False

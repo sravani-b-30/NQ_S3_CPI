@@ -1220,6 +1220,8 @@ if st.button("Show Features"):
 if st.session_state['show_features_clicked'] and asin in merged_data_df['ASIN'].values:
     show_features(asin)
 
+compulsory_features = []
+
 # Select compulsory features based on ASIN product details
 compulsory_features_vars = {}
 if asin in merged_data_df['ASIN'].values:
@@ -1300,21 +1302,21 @@ def get_selected_keyword_ids():
     # Simply return the keyword IDs stored in session state
     return st.session_state.get('selected_keyword_ids', [])
 
-# Button to trigger analysis
-if st.button("Analyze") or st.session_state.get('recompute', False):
-    # Run the analysis function
-    run_analysis_button(
-        merged_data_df,
-        price_data_df,
-        asin,
-        price_min,
-        price_max,
-        target_price,
-        start_date,
-        end_date,
-        same_brand_option,
-        st.session_state['compulsory_features']
-    )
-    
-    # Reset the recompute flag after analysis
-    st.session_state['recompute'] = False
+# Define the Analyze button and conditionally trigger the analysis
+if st.button("Analyze"):
+    # Check if all required fields are filled before running analysis
+    if asin and price_min and price_max and target_price:
+        run_analysis_button(
+            merged_data_df, 
+            price_data_df, 
+            asin, 
+            price_min, 
+            price_max, 
+            target_price, 
+            start_date, 
+            end_date, 
+            same_brand_option, 
+            compulsory_features
+        )
+    else:
+        st.warning("Please enter ASIN, Price Min, Price Max, and Target Price before running the analysis.")

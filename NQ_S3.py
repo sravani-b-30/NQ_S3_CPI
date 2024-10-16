@@ -328,6 +328,20 @@ def load_and_preprocess_data():
     
     st.write("Loaded and processed merged_data_df:", merged_data_df.head())
     merged_data_df['price'] = pd.to_numeric(merged_data_df['price'], errors='coerce')
+    # Ensure ASIN consistency across both DataFrames
+    df_scrapped_cleaned['ASIN'] = df_scrapped_cleaned['ASIN'].str.strip().str.upper()
+    merged_data_df['asin'] = merged_data_df['asin'].str.strip().str.upper()
+
+    # Debugging: Check the columns and missing values before merging
+    st.write("Columns in df_scrapped_cleaned:", df_scrapped_cleaned.columns)
+    st.write("Columns in merged_data_df:", merged_data_df.columns)
+    st.write("Missing values in df_scrapped_cleaned ASIN:", df_scrapped_cleaned['ASIN'].isna().sum())
+    st.write("Missing values in merged_data_df (asin, brand, product_title, price, date):", merged_data_df[['asin', 'brand', 'product_title', 'price', 'date']].isna().sum())
+
+    # Try an inner join for troubleshooting purposes
+    test_merge_df = pd.merge(df_scrapped_cleaned, merged_data_df[['asin', 'brand', 'product_title', 'price', 'date']], left_on='ASIN', right_on='asin', how='inner')
+    st.write("Inner join result (for debugging purposes):", test_merge_df.head())
+    
     merged_data_df = pd.merge(df_scrapped_cleaned, merged_data_df[['asin', 'brand', 'product_title', 'price', 'date']], left_on='ASIN', right_on='asin', how='left')
     st.write("Merged df_scrapped_cleaned with merged_data_df:", merged_data_df.head())
     # Debugging: Check merged_data_df after renaming and modifying 'asin'

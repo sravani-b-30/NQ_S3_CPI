@@ -302,23 +302,23 @@ def load_static_file_from_s3(file_name):
 @st.cache_data
 def load_and_preprocess_data():
     asin_keyword_df = load_latest_csv_from_s3('asin_keyword_id_mapping')
-    st.write("Loaded asin_keyword_df:", asin_keyword_df.head())
+    #st.write("Loaded asin_keyword_df:", asin_keyword_df.head())
     keyword_id_df = load_latest_csv_from_s3('keyword_x_keyword_id')
-    st.write("Loaded keyword_id_df:", keyword_id_df.head())
+    #st.write("Loaded keyword_id_df:", keyword_id_df.head())
 
      # Debugging: Verify static files loaded
     #st.write("Loaded asin_keyword_df from S3 (static):", asin_keyword_df.head())
     #st.write("Loaded keyword_id_df from S3 (static):", keyword_id_df.head())
     
     df_scrapped = load_static_file_from_s3('NAPQUEEN.csv')
-    st.write("Loaded df_scrapped (NAPQUEEN.csv):", df_scrapped.head())
+    #st.write("Loaded df_scrapped (NAPQUEEN.csv):", df_scrapped.head())
     df_scrapped['ASIN'] = df_scrapped['ASIN'].str.upper()
     df_scrapped_cleaned = df_scrapped.drop_duplicates(subset='ASIN')
-    st.write("Cleaned df_scrapped (NAPQUEEN.csv):", df_scrapped_cleaned.head())
+    #st.write("Cleaned df_scrapped (NAPQUEEN.csv):", df_scrapped_cleaned.head())
 
     # Load dynamic files with latest dates
     merged_data_df = load_latest_csv_from_s3('merged_data_')
-    st.write("Latest merged_data file name loaded:", merged_data_df.head())
+    #st.write("Latest merged_data file name loaded:", merged_data_df.head())
     merged_data_df = merged_data_df.rename(columns={"ASIN": "asin", "title": "product_title"})
     merged_data_df['asin'] = merged_data_df['asin'].str.upper()
     merged_data_df['ASIN'] = merged_data_df['asin']
@@ -326,29 +326,29 @@ def load_and_preprocess_data():
     missing_brand_mask = merged_data_df['brand'].isna() | (merged_data_df['brand'] == "")
     merged_data_df.loc[missing_brand_mask, 'brand'] = merged_data_df.loc[missing_brand_mask, 'product_title'].apply(extract_brand_from_title)
     
-    st.write("Loaded and processed merged_data_df:", merged_data_df.head())
+    #st.write("Loaded and processed merged_data_df:", merged_data_df.head())
     merged_data_df['price'] = pd.to_numeric(merged_data_df['price'], errors='coerce')
     # Ensure ASIN consistency across both DataFrames
     df_scrapped_cleaned['ASIN'] = df_scrapped_cleaned['ASIN'].str.strip().str.upper()
     merged_data_df['asin'] = merged_data_df['asin'].str.strip().str.upper()
 
     # Debugging: Check the columns and missing values before merging
-    st.write("Columns in df_scrapped_cleaned:", df_scrapped_cleaned.columns)
-    st.write("Columns in merged_data_df:", merged_data_df.columns)
-    st.write("Missing values in df_scrapped_cleaned ASIN:", df_scrapped_cleaned['ASIN'].isna().sum())
-    st.write("Missing values in merged_data_df (asin, brand, product_title, price, date):", merged_data_df[['asin', 'brand', 'product_title', 'price', 'date']].isna().sum())
+    #st.write("Columns in df_scrapped_cleaned:", df_scrapped_cleaned.columns)
+    #st.write("Columns in merged_data_df:", merged_data_df.columns)
+    #st.write("Missing values in df_scrapped_cleaned ASIN:", df_scrapped_cleaned['ASIN'].isna().sum())
+    #st.write("Missing values in merged_data_df (asin, brand, product_title, price, date):", merged_data_df[['asin', 'brand', 'product_title', 'price', 'date']].isna().sum())
 
     # Try an inner join for troubleshooting purposes
-    test_merge_df = pd.merge(df_scrapped_cleaned, merged_data_df[['asin', 'brand', 'product_title', 'price', 'date']], left_on='ASIN', right_on='asin', how='inner')
-    st.write("Inner join result (for debugging purposes):", test_merge_df.head())
-    
+    #test_merge_df = pd.merge(df_scrapped_cleaned, merged_data_df[['asin', 'brand', 'product_title', 'price', 'date']], left_on='ASIN', right_on='asin', how='inner')
+    #st.write("Inner join result (for debugging purposes):", test_merge_df.head())
+
     merged_data_df = pd.merge(df_scrapped_cleaned, merged_data_df[['asin', 'brand', 'product_title', 'price', 'date']], left_on='ASIN', right_on='asin', how='left')
-    st.write("Merged df_scrapped_cleaned with merged_data_df:", merged_data_df.head())
+    #st.write("Merged df_scrapped_cleaned with merged_data_df:", merged_data_df.head())
     # Debugging: Check merged_data_df after renaming and modifying 'asin'
     #st.write("Loaded merged_data_df with latest date (dynamic):", merged_data_df.head())
     
     price_data_df = load_latest_csv_from_s3('napqueen_price_tracker')
-    st.write("Loaded price_data_df (napqueen_price_tracker):", price_data_df.head())
+    #st.write("Loaded price_data_df (napqueen_price_tracker):", price_data_df.head())
     
     # Debugging: Check price_data_df after loading
     #st.write("Loaded price_data_df with latest date (dynamic):", price_data_df.head())

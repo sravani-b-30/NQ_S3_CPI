@@ -831,6 +831,7 @@ def calculate_and_plot_cpi(merged_data_df, price_data_df, asin_list, start_date,
 
     compulsory_keywords = st.session_state.get('compulsory_keywords', [])
 
+    combined_competitor_df = pd.DataFrame()
     # Initialize session state variables
     #if 'result_df' not in st.session_state:
      #   st.session_state['result_df'] = None
@@ -878,12 +879,15 @@ def calculate_and_plot_cpi(merged_data_df, price_data_df, asin_list, start_date,
 
                 # Append each day's competitor details to the combined DataFrame
                 competitor_details_df = result['competitors']
-                competitor_details_df['Date'] = result['date']  # Add date to track individual days
-                combined_competitor_df = pd.concat([combined_competitor_df, competitor_details_df])
+                if not competitor_details_df.empty:
+                    competitor_details_df['Date'] = result['date']  # Add date to track individual days
+                    combined_competitor_df = pd.concat([combined_competitor_df, competitor_details_df], ignore_index=True)
+
             
             current_date += timedelta(days=1)
             
-            # Save the combined competitor details DataFrame as a single CSV
+            # Save the combined competitor details DataFrame as a single CSV if it has data
+        if not combined_competitor_df.empty:
             combined_csv_filename = f"combined_competitors_{asin}_{start_date}_{end_date}.csv"
             combined_competitor_df.to_csv(combined_csv_filename, index=False)
             st.session_state['competitor_files']['combined'] = combined_csv_filename
@@ -946,19 +950,21 @@ def calculate_and_plot_cpi(merged_data_df, price_data_df, asin_list, start_date,
             #st.dataframe(competitor_data)
         #except Exception as e:
             #st.error(f"Error loading file for {date_str}: {e}")
-            
-    # Display and provide download option for the combined CSV file
-    st.subheader("Combined Competitor Data for Selected Date Range")
-    st.dataframe(combined_competitor_df)
 
-    # Download button for the combined CSV
-    with open(combined_csv_filename, 'rb') as file:
-        st.download_button(
-            label=f"Download Combined Competitor Details for {asin}",
-            data=file,
-            file_name=combined_csv_filename,
-            mime='text/csv'
-        )
+    if not combined_competitor_df.empty:
+        st.subheader("Combined Competitor Data for Selected Date Range")
+        st.dataframe(combined_competitor_df)
+
+        # Download button for the combined CSV
+        with open(combined_csv_filename, 'rb') as file:
+            st.download_button(
+                label=f"Download Combined Competitor Details for {asin}",
+                data=file,
+                file_name=combined_csv_filename,
+                mime='text/csv'
+            )
+    else:
+        st.write("No competitor data available for the selected date range.")
 
 def plot_competitor_vs_null_analysis(competitor_count_per_day, null_price_count_per_day, start_date, end_date):
     dates = pd.date_range(start=start_date, end=end_date)

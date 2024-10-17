@@ -680,7 +680,7 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     scatter_competitors_df = pd.DataFrame(similar_products, columns=[
         'ASIN', 'Title', 'Price', 'Weighted Score', 'Details Score', 
         'Title Score', 'Description Score', 'Product Details', 
-        'Details Comparison', 'Title Comparison', 'Description Comparison'
+        'Details Comparison', 'Title Comparison', 'Description Comparison', 'Brand'
     ])
     
     # Extract Product Dimension and Matching Features
@@ -766,7 +766,7 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
             file_name=scatter_competitors_filename,
             mime='text/csv'
         )
-        
+
     # CPI Score Polar Plot
     competitor_prices = np.array(prices)
     cpi_score = calculate_cpi_score(target_price, competitor_prices)

@@ -558,12 +558,17 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
 
     # Optionally, save to CSV or display in Streamlit
     #similarities_df = pd.DataFrame(similarities, columns=[
-        #'ASIN', 'Product Title', 'Price', 'Weighted Score', 'Details Score',
-        #'Title Score', 'Description Score', 'Compare Details', 'Details Comparison',
-        #'Title Comparison', 'Description Comparison', 'Brand'
+     #   'ASIN', 'Product Title', 'Price', 'Brand'
     #])
     #st.dataframe(similarities_df)
-    #similarities_df.to_csv('similarity_df.csv')
+    #similarity_df = similarities_df.to_csv('similarity_df.csv')
+    #st.download_button(
+     #   label=f"Download Competitor Details",
+     #   data=similarity_df,
+      #  file_name=f"similarity_df.csv",
+       # mime='text/csv',
+        #key=f"download_button_{asin}_{date}"  # Ensure this key is unique
+    #)
 
     return similarities
 
@@ -641,16 +646,13 @@ def show_features(asin):
 def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, merged_data_df, compulsory_keywords):
     # Find similar products
     similar_products = find_similar_products(asin, price_min, price_max, merged_data_df, compulsory_features, same_brand_option, compulsory_keywords)
-    
-    # Debugging line to check structure
-    #st.write("Similar Products Structure:", similar_products)
 
     # Retrieve target product information
     target_product = merged_data_df[merged_data_df['ASIN'] == asin].iloc[0]
     target_title = str(target_product['product_title']).lower()
     target_desc = str(target_product['Description']).lower()
     target_details = target_product['Product Details']
-    
+
     # Calculate similarity scores for the target product
     details_score, title_score, desc_score, details_comparison, title_comparison, desc_comparison = calculate_similarity(
         target_details, target_details, target_title, target_title, target_desc, target_desc
@@ -673,40 +675,6 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     asin_list = [p[0] for p in similar_products]
     #sizes = [p[7].get('Size', 'N/A') for p in similar_products]
     #styles = [p[7].get('Style', 'N/A') for p in similar_products]
-
-    # Extract details for each competitor for CSV creation
-    competitor_data = []
-
-    # Loop through each similar product and collect relevant details
-    for product in similar_products:
-        asin = product[0]
-        title = product[1]
-        price = product[2]
-        #brand = product[11] 
-        
-        # Extract matching features
-        matching_features = {feature: product[7].get(feature, 'N/A') for feature in compulsory_features}  # Assuming product[7] holds product details
-
-        # Add data to list for CSV creation
-        competitor_data.append({
-            'ASIN': asin,
-            'Title': title,
-            'Price': price,
-            #'Brand': brand,
-            'Matching Features': matching_features
-        })
-
-    # Create DataFrame for competitor data
-    competitor_df = pd.DataFrame(competitor_data)
-
-    # Save as CSV and create download link
-    csv_data = competitor_df.to_csv(index=False)
-    st.download_button(
-        label="Download Competitor Data CSV",
-        data=csv_data,
-        file_name=f"competitors_scatter_plot_{asin}.csv",
-        mime='text/csv'
-    )
     
     # Plot using Plotly
     fig = go.Figure()
@@ -927,7 +895,7 @@ def calculate_and_plot_cpi(merged_data_df, price_data_df, asin_list, start_date,
     price_data_df_filtered = price_data_df[price_data_df['Ad Type'] == 'SP']
     napqueen_df = price_data_df_filtered
     #napqueen_df['Date'] = pd.to_datetime(napqueen_df['Date'], format='%d-%m-%Y', errors='coerce')
-    napqueen_df = napqueen_df.rename(columns={'asin': 'ASIN', 'date' : 'Date'})
+    napqueen_df = napqueen_df.rename(columns={'asin': 'ASIN', 'orderedunits_m' : 'orderedunits'})
 
     # Clean and ensure consistent data in ASIN columns
     result_df['ASIN'] = result_df['ASIN'].str.upper().str.strip()  # Convert to uppercase and remove spaces
@@ -947,7 +915,7 @@ def calculate_and_plot_cpi(merged_data_df, price_data_df, asin_list, start_date,
         result_df = pd.merge(result_df, napqueen_df[['Date', 'ASIN', 'ad_spend', 'orderedunits']], on=['Date', 'ASIN'], how='left')
 
         st.success("Merging successful! Displaying the merged dataframe:")
-        #st.dataframe(result_df)
+        st.dataframe(result_df)
 
     except KeyError as e:
         st.error(f"KeyError: {e} - Likely missing columns during merging.")
@@ -1163,57 +1131,44 @@ def clear_session_state_on_date_change():
             st.session_state['prev_start_date'] = start_date
             st.session_state['prev_end_date'] = end_date
 
-# Initialize input session states only if they are not already set
-if 'asin' not in st.session_state:
-    st.session_state['asin'] = ""
-if 'price_min' not in st.session_state:
-    st.session_state['price_min'] = 0.00
-if 'price_max' not in st.session_state:
-    st.session_state['price_max'] = 0.00
-if 'target_price' not in st.session_state:
-    st.session_state['target_price'] = 0.00
-if 'start_date' not in st.session_state:
-    st.session_state['start_date'] = None
-if 'end_date' not in st.session_state:
-    st.session_state['end_date'] = None
-if 'same_brand_option' not in st.session_state:
-    st.session_state['same_brand_option'] = 'all'
-if 'compulsory_features' not in st.session_state:
-    st.session_state['compulsory_features'] = []
-if 'recompute' not in st.session_state:
-    st.session_state['recompute'] = False
-
-# Define a function to set the recompute flag when any input changes
-def update_recompute_flag():
-    st.session_state['recompute'] = True
-
 # Streamlit UI for ASIN Competitor Analysis
 st.title("ASIN Competitor Analysis")
 
-# Input fields with on_change callback to set recompute flag
-asin = st.text_input("Enter ASIN", value=st.session_state['asin'], on_change=update_recompute_flag)
-price_min = st.number_input("Price Min", value=st.session_state['price_min'], on_change=update_recompute_flag)
-price_max = st.number_input("Price Max", value=st.session_state['price_max'], on_change=update_recompute_flag)
-target_price = st.number_input("Target Price", value=st.session_state['target_price'], on_change=update_recompute_flag)
+# Create columns to use horizontal space
+col1, col2, col3 = st.columns(3)
 
-# Date input fields, with conditional display for analysis
-if st.checkbox("Include Dates for Time-Series Analysis", value=True):
-    start_date = st.date_input("Start Date", value=st.session_state['start_date'], on_change=update_recompute_flag)
-    end_date = st.date_input("End Date", value=st.session_state['end_date'], on_change=update_recompute_flag)
+# Input fields for ASIN and price range
+with col1:
+    asin = st.text_input("Enter ASIN").upper()
+
+with col2:
+    price_min = st.number_input("Price Min", value=0.00)
+
+with col3:
+    price_max = st.number_input("Price Max", value=0.00)
+
+# Target price input
+target_price = st.number_input("Target Price", value=0.00)
+
+# Checkbox for including time-series analysis, placed directly after Target Price
+include_dates = st.checkbox("Include Dates for Time-Series Analysis", value=True)
+
+# Display empty date inputs if the user opts to include dates
+if include_dates:
+    col4, col5 = st.columns(2)
+    with col4:
+        start_date = st.date_input("Start Date", value=None)  # Ensure default is empty
+    with col5:
+        end_date = st.date_input("End Date", value=None)  # Ensure default is empty
 else:
     start_date, end_date = None, None
 
-# Same brand option radio buttons
-same_brand_option = st.radio(
-    "Same Brand Option",
-    options=['all', 'only', 'omit'],
-    index=['all', 'only', 'omit'].index(st.session_state['same_brand_option']),
-    on_change=update_recompute_flag,
-    key="same_brand_option_key" 
-)
 
 # Add the session state clearing logic at the beginning of the app
 clear_session_state_on_date_change()
+
+# Radio buttons for same brand option
+same_brand_option = st.radio("Same Brand Option", ('all', 'only', 'omit'))
 
 # Initialize session state for button click tracking
 if 'show_features_clicked' not in st.session_state:
@@ -1231,22 +1186,16 @@ if st.button("Show Features"):
 if st.session_state['show_features_clicked'] and asin in merged_data_df['ASIN'].values:
     show_features(asin)
 
-compulsory_features = []
-
-# Select compulsory features based on ASIN product details
+# Automatically display checkboxes for each product detail feature (if ASIN exists)
 compulsory_features_vars = {}
 if asin in merged_data_df['ASIN'].values:
     product_details = merged_data_df[merged_data_df['ASIN'] == asin].iloc[0]['Product Details']
     st.write("Select compulsory features:")
     for feature in product_details.keys():
-        compulsory_features_vars[feature] = st.checkbox(
-            f"Include {feature}",
-            value=feature in st.session_state['compulsory_features'],
-            on_change=update_recompute_flag
-        )
+        compulsory_features_vars[feature] = st.checkbox(f"Include {feature}", key=f"checkbox_{feature}")
 
 # Collect selected compulsory features
-st.session_state['compulsory_features'] = [feature for feature, selected in compulsory_features_vars.items() if selected]
+compulsory_features = [feature for feature, selected in compulsory_features_vars.items() if selected]
 
 # Load keyword mapping
 keyword_mapping = load_keyword_mapping(keyword_id_df)
@@ -1313,21 +1262,56 @@ def get_selected_keyword_ids():
     # Simply return the keyword IDs stored in session state
     return st.session_state.get('selected_keyword_ids', [])
 
-# Define the Analyze button and conditionally trigger the analysis
+#def update_keyword_ids(asin, instance_id=None):
+    # Load keyword IDs based on the input ASIN
+    #keyword_ids = load_keyword_ids(asin)
+    # Map the loaded keyword IDs to their corresponding keywords
+    #keyword_options = [keyword for keyword, id in keyword_mapping.items() if id in keyword_ids]
+    #if not keyword_options:
+        #st.write(f"No keywords found for ASIN: {asin}")
+        #return []
+    # Initialize session state for checkboxes if not already done
+    #if 'checkbox_states' not in st.session_state:
+        #st.session_state['checkbox_states'] = {}
+    # Dictionary to store selected keywords
+    #selected_keywords = []
+    # Display each keyword option as a checkbox
+    #for keyword in keyword_options:
+        # Generate a unique key based on ASIN and keyword
+        #unique_key = f"{asin}_{keyword}_{instance_id}"  
+        # Initialize checkbox state in session_state if not already present
+        #if unique_key not in st.session_state['checkbox_states']:
+            #st.session_state['checkbox_states'][unique_key] = False
+        # Create checkbox and update session state based on user input
+        #st.session_state['checkbox_states'][unique_key] = st.checkbox(
+            #f"Select {keyword}", 
+            #value=st.session_state['checkbox_states'][unique_key],
+            #key=unique_key
+        #)
+        # If the checkbox is selected, add it to the selected keywords list
+        #if st.session_state['checkbox_states'][unique_key]:
+            #selected_keywords.append(keyword)
+    # Update selected keyword IDs based on user selection
+    #selected_keyword_ids = [keyword_mapping[keyword] for keyword in selected_keywords]
+    # Store selected keyword IDs in session state
+    #st.session_state['selected_keyword_ids'] = selected_keyword_ids
+    #return selected_keyword_ids
+
+# Store input values in session state for use in re-runs
+if 'asin_list' not in st.session_state:
+    st.session_state['asin_list'] = [asin]
+if 'price_min' not in st.session_state:
+    st.session_state['price_min'] = price_min
+if 'price_max' not in st.session_state:
+    st.session_state['price_max'] = price_max
+if 'start_date' not in st.session_state:
+    st.session_state['start_date'] = start_date
+if 'end_date' not in st.session_state:
+    st.session_state['end_date'] = end_date
+if 'compulsory_features' not in st.session_state:
+    st.session_state['compulsory_features'] = compulsory_features
+if 'same_brand_option' not in st.session_state:
+    st.session_state['same_brand_option'] = same_brand_option
+
 if st.button("Analyze"):
-    # Check if all required fields are filled before running analysis
-    if asin and price_min and price_max and target_price:
-        run_analysis_button(
-            merged_data_df, 
-            price_data_df, 
-            asin, 
-            price_min, 
-            price_max, 
-            target_price, 
-            start_date, 
-            end_date, 
-            same_brand_option, 
-            compulsory_features
-        )
-    else:
-        st.warning("Please enter ASIN, Price Min, Price Max, and Target Price before running the analysis.")
+    run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_max, target_price, start_date, end_date, same_brand_option, compulsory_features)

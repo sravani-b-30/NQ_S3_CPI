@@ -870,13 +870,23 @@ def calculate_and_plot_cpi(merged_data_df, price_data_df, asin_list, start_date,
                 null_price_count_per_day.append(daily_null_count)
 
                 # Save competitors data to CSV immediately and store in session_state
+                #competitor_details_df = result['competitors']
+                #date_str = result['date'].strftime('%Y-%m-%d')
+                #csv_filename = f"competitors_{asin}_{date_str}.csv"
+                #competitor_details_df.to_csv(csv_filename, index=False)
+                #st.session_state['competitor_files'][date_str] = csv_filename
+
+                # Append each day's competitor details to the combined DataFrame
                 competitor_details_df = result['competitors']
-                date_str = result['date'].strftime('%Y-%m-%d')
-                csv_filename = f"competitors_{asin}_{date_str}.csv"
-                competitor_details_df.to_csv(csv_filename, index=False)
-                st.session_state['competitor_files'][date_str] = csv_filename
+                competitor_details_df['Date'] = result['date']  # Add date to track individual days
+                combined_competitor_df = pd.concat([combined_competitor_df, competitor_details_df])
             
             current_date += timedelta(days=1)
+            
+            # Save the combined competitor details DataFrame as a single CSV
+            combined_csv_filename = f"combined_competitors_{asin}_{start_date}_{end_date}.csv"
+            combined_competitor_df.to_csv(combined_csv_filename, index=False)
+            st.session_state['competitor_files']['combined'] = combined_csv_filename
 
             # Create result DataFrame and store in session state
             result_df = pd.DataFrame(all_results,
@@ -927,15 +937,28 @@ def calculate_and_plot_cpi(merged_data_df, price_data_df, asin_list, start_date,
     plot_results(result_df, asin_list, start_date, end_date)
 
     # Now, display each CSV file for the respective dates one by one
-    st.subheader("Competitor Data for Each Day")
-    for date_str, csv_filename in st.session_state['competitor_files'].items():
-        st.write(f"Competitor Data for {date_str}")
-        try:
+    #st.subheader("Competitor Data for Each Day")
+    #for date_str, csv_filename in st.session_state['competitor_files'].items():
+        #st.write(f"Competitor Data for {date_str}")
+        #try:
             # Load and display the CSV file for this date
-            competitor_data = pd.read_csv(csv_filename)
-            st.dataframe(competitor_data)
-        except Exception as e:
-            st.error(f"Error loading file for {date_str}: {e}")
+            #competitor_data = pd.read_csv(csv_filename)
+            #st.dataframe(competitor_data)
+        #except Exception as e:
+            #st.error(f"Error loading file for {date_str}: {e}")
+            
+    # Display and provide download option for the combined CSV file
+    st.subheader("Combined Competitor Data for Selected Date Range")
+    st.dataframe(combined_competitor_df)
+
+    # Download button for the combined CSV
+    with open(combined_csv_filename, 'rb') as file:
+        st.download_button(
+            label=f"Download Combined Competitor Details for {asin}",
+            data=file,
+            file_name=combined_csv_filename,
+            mime='text/csv'
+        )
 
 def plot_competitor_vs_null_analysis(competitor_count_per_day, null_price_count_per_day, start_date, end_date):
     dates = pd.date_range(start=start_date, end=end_date)

@@ -326,7 +326,7 @@ def load_and_preprocess_data():
     missing_brand_mask = merged_data_df['brand'].isna() | (merged_data_df['brand'] == "")
     merged_data_df.loc[missing_brand_mask, 'brand'] = merged_data_df.loc[missing_brand_mask, 'product_title'].apply(extract_brand_from_title)
     
-    #st.write("Loaded and processed merged_data_df:", merged_data_df.head())
+    st.write("Loaded and processed merged_data_df:", merged_data_df.head())
     merged_data_df['price'] = pd.to_numeric(merged_data_df['price'], errors='coerce')
     # Ensure ASIN consistency across both DataFrames
     df_scrapped_cleaned['ASIN'] = df_scrapped_cleaned['ASIN'].str.strip().str.upper()

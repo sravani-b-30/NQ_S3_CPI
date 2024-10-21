@@ -370,8 +370,8 @@ def load_and_preprocess_data():
     
     merged_data_df = merged_data_df.drop_duplicates(subset='ASIN')
     merged_data_df = merged_data_df.set_index('ASIN', sorted=False, drop=False).persist()
-    print(merged_data_df.divisions)
-
+    st.write("Printing the merged_data_df:" ,merged_data_df.divisions)
+   
     # Parse dictionary columns
     for col in ['Product Details', 'Glance Icon Details', 'Option', 'Drop Down']:
             merged_data_df[col] = merged_data_df[col].map_partitions(

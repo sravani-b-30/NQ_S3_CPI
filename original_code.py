@@ -383,7 +383,7 @@ def load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix):
         
     return asin_keyword_df, keyword_id_df, merged_data_df, price_data_df
 
-asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = load_and_preprocess_data()
+asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix)
 
 # Use session state to store the DataFrame and ensure it's available across sessions
 if 'show_features_df' not in st.session_state:
@@ -1080,7 +1080,7 @@ def run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_ma
 
 
 # Load data globally before starting the Streamlit app
-df = load_and_preprocess_data()
+df = load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix)
 
 
 def load_keyword_ids(input_asin, asin_keyword_df):

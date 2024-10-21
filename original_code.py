@@ -308,7 +308,7 @@ def load_static_file_from_s3(s3_folder, file_name):
     obj = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
     return pd.read_csv(obj['Body'], low_memory=False, on_bad_lines='skip')
 
-@st.cache_data
+@st.cache_resource
 def load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix):
     asin_keyword_df = load_latest_csv_from_s3(s3_folder, 'asin_keyword_id_mapping').compute()
     keyword_id_df = load_latest_csv_from_s3(s3_folder, 'keyword_x_keyword_id').compute()

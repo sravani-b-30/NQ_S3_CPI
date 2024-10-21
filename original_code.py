@@ -378,6 +378,9 @@ def load_and_preprocess_data():
     st.write("Merged data after parsing columns:", 
              merged_data_df[['Product Details', 'Glance Icon Details', 'Option', 'Drop Down']].head())
     
+    merged_data_df = merged_data_df.set_index('ASIN', sorted=False, drop=False).persist()
+    print(merged_data_df.divisions)
+
     def safe_parse_dict_str(df):
     # Ensure each partition is processed consistently
         return df.apply(lambda x: parse_dict_str(x) if isinstance(x, str) else x)

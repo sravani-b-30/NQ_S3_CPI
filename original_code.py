@@ -381,7 +381,7 @@ def load_and_preprocess_data():
     merged_data_df['Size'] = merged_data_df['product_title'].map_partitions(lambda df: df.apply(extract_size))
 
     def update_product_details(row):
-        details = row['Product Details']
+        details = row['Product Details'] if isinstance(row['Product Details'], dict) else {}
         details['Style'] = row['Style']
         details['Size'] = row['Size']
         return details

@@ -377,6 +377,18 @@ def load_and_preprocess_data():
     # Debugging: Verify parsing applied to merged_data_df
     st.write("Merged data after parsing columns:", 
              merged_data_df[['Product Details', 'Glance Icon Details', 'Option', 'Drop Down']].head())
+    
+    def safe_parse_dict_str(df):
+    # Ensure each partition is processed consistently
+        return df.apply(lambda x: parse_dict_str(x) if isinstance(x, str) else x)
+
+    merged_data_df[col] = merged_data_df[col].map_partitions(safe_parse_dict_str)
+
+    # Print out partition information
+    for partition in merged_data_df.partitions:
+        print(partition.head())
+
+    merged_data_df[col] = merged_data_df[col].map_partitions(safe_parse_dict_str).compute()
 
     merged_data_df['Style'] = merged_data_df['product_title'].map_partitions(lambda df: df.apply(extract_style))
     merged_data_df['Size'] = merged_data_df['product_title'].map_partitions(lambda df: df.apply(extract_size))
@@ -1267,30 +1279,9 @@ if st.session_state['show_features_clicked'] and asin in merged_data_df['ASIN'].
 compulsory_features_vars = {}
 if asin in merged_data_df['ASIN'].values:
     product_details = merged_data_df[merged_data_df['ASIN'] == asin].iloc[0]['Product Details']
-    # Check if 'Product Details' is a valid dictionary or try to convert if it's a string
-    if isinstance(product_details, dict):
-        st.write("Product details loaded successfully:")
-    elif isinstance(product_details, str):
-        try:
-            product_details = json.loads(product_details)  # Try to convert string to dictionary
-            st.write("Product details successfully parsed from string:")
-        except (json.JSONDecodeError, TypeError):
-            product_details = {}  # Invalid format, set to empty dict
-            st.write("Product details could not be parsed. Defaulting to empty.")
-    else:
-        product_details = {}  # Invalid format, set to empty dict
-        st.write("Product details are not available or in an invalid format. Defaulting to empty.")
-
-    # If product_details is a valid dictionary, show checkboxes for each feature
-    if product_details:
-        st.write("Select compulsory features:")
-        for feature in product_details.keys():
-            compulsory_features_vars[feature] = st.checkbox(f"Include {feature}", key=f"checkbox_{feature}")
-    else:
-        st.write("No valid product details available for the selected ASIN.")
-else:
-    st.write(f"ASIN {asin} not found in the data.")
-
+    st.write("Select compulsory features:")
+    for feature in product_details.keys():
+        compulsory_features_vars[feature] = st.checkbox(f"Include {feature}", key=f"checkbox_{feature}")
 
 # Collect selected compulsory features
 compulsory_features = [feature for feature, selected in compulsory_features_vars.items() if selected]

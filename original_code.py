@@ -295,16 +295,19 @@ def load_latest_csv_from_s3(prefix):
     """Loads the latest CSV file for a given prefix."""
     latest_file_key = get_latest_file_from_s3(prefix)
     obj = s3_client.get_object(Bucket=bucket_name, Key=latest_file_key)
-    byte_stream = io.BytesIO(obj['Body'])
-    return dd.read_csv(byte_stream, low_memory=False)
+    #byte_stream = io.BytesIO(obj['Body'])
+    #return dd.read_csv(byte_stream, low_memory=False)
+    return pd.read_csv(obj['Body'], low_memory=False)
+
 
 @delayed
 def load_static_file_from_s3(file_name):
     """Loads a static CSV file from S3 without searching for latest version."""
     s3_key = f"{s3_folder}{file_name}"
     obj = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
-    byte_stream_2 = io.BytesIO(obj['Body'])
-    return dd.read_csv(byte_stream_2, low_memory=False, on_bad_lines='skip')
+    #byte_stream_2 = io.BytesIO(obj['Body'])
+    #return dd.read_csv(byte_stream_2, low_memory=False, on_bad_lines='skip')
+    return pd.read_csv(obj['Body'], low_memory=False, on_bad_lines='skip')
 
 @st.cache_data
 def load_and_preprocess_data():

@@ -388,7 +388,7 @@ asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = load_and_preproc
 # Use session state to store the DataFrame and ensure it's available across sessions
 if 'show_features_df' not in st.session_state:
     # Load the data (this will be cached using st.cache_data)
-    _, _, merged_data_df, _  = load_and_preprocess_data()
+    _, _, merged_data_df, _  = load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix)
     st.session_state['show_features_df'] = merged_data_df
 else:
     merged_data_df = st.session_state['show_features_df']

@@ -345,7 +345,7 @@ def load_and_preprocess_data():
     merged_data_df = merged_data_df.map_partitions(fill_missing_brand)
 
     #st.write("Loaded and processed merged_data_df:", merged_data_df.head())
-    merged_data_df['price'] = dd.to_numeric(merged_data_df['price'], errors='coerce')
+    #merged_data_df['price'] = dd.to_numeric(merged_data_df['price'], errors='coerce')
     # Ensure ASIN consistency across both DataFrames
     df_scrapped_cleaned['ASIN'] = df_scrapped_cleaned['ASIN'].str.strip().str.upper()
     merged_data_df['asin'] = merged_data_df['asin'].str.strip().str.upper()
@@ -356,74 +356,117 @@ def load_and_preprocess_data():
     #st.write("Missing values in df_scrapped_cleaned ASIN:", df_scrapped_cleaned['ASIN'].isna().sum())
     #st.write("Missing values in merged_data_df (asin, brand, product_title, price, date):", merged_data_df[['asin', 'brand', 'product_title', 'price', 'date']].isna().sum())
 
-    merged_data_df = dd.merge(df_scrapped_cleaned, merged_data_df[['asin', 'brand', 'product_title', 'price', 'date']], left_on='ASIN', right_on='asin', how='left')
+    #merged_data_df = dd.merge(df_scrapped_cleaned, merged_data_df[['asin', 'brand', 'product_title', 'price', 'date']], left_on='ASIN', right_on='asin', how='left')
     #st.write("Merged df_scrapped_cleaned with merged_data_df:", merged_data_df.head())
     # Debugging: Check merged_data_df after renaming and modifying 'asin'
     #st.write("Loaded merged_data_df with latest date (dynamic):", merged_data_df.head())
     #merged_data_df = merged_data_df.compute()
+    
+    merged_data_df['price'] = dd.to_numeric(merged_data_df['price'], errors='coerce')
+    merged_data_df = dd.merge(
+            df_scrapped_cleaned,
+            merged_data_df[['asin', 'brand', 'product_title', 'price', 'date']],
+            left_on='ASIN', right_on='asin', how='left'
+        )
+        
+    merged_data_df = merged_data_df.compute()
 
+    merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(parse_dict_str)
+    merged_data_df['Glance Icon Details'] = merged_data_df['Glance Icon Details'].apply(parse_dict_str)
+    merged_data_df['Option'] = merged_data_df['Option'].apply(parse_dict_str)
+    merged_data_df['Drop Down'] = merged_data_df['Drop Down'].apply(parse_dict_str)
+
+    merged_data_df['Style'] = merged_data_df['product_title'].apply(extract_style)
+    merged_data_df['Size'] = merged_data_df['product_title'].apply(extract_size)
+
+    def update_product_details(row):
+            details = row['Product Details']
+            details['Style'] = row['Style']
+            details['Size'] = row['Size']
+            return details
+
+    merged_data_df['Product Details'] = merged_data_df.apply(update_product_details, axis=1)
+
+    def extract_dimensions(details):
+            # Check if 'Product Dimensions' exists in the dictionary
+            if isinstance(details, dict):
+               return details.get('Product Dimensions', None)
+            return None
+
+        # Create a new column 'Product Dimensions' by extracting from 'Product Details'
+    merged_data_df['Product Dimensions'] = merged_data_df['Product Details'].apply(extract_dimensions)
+
+    reference_df = pd.read_csv('product_dimension_size_style_reference.csv')
+
+    merged_data_df = merged_data_df.merge(reference_df, on='Product Dimensions', how='left', suffixes=('', '_ref'))
+
+        # Fill missing values in 'Size' and 'Style' columns with the values from the reference DataFrame
+    merged_data_df['Size'] = merged_data_df['Size'].fillna(merged_data_df['Size_ref'])
+    merged_data_df['Style'] = merged_data_df['Style'].fillna(merged_data_df['Style_ref'])
     price_data_df = load_latest_csv_from_s3('napqueen_price_tracker').compute()
+    
+    return asin_keyword_df, keyword_id_df, merged_data_df, price_data_df
     #st.write("Loaded price_data_df (napqueen_price_tracker):", price_data_df.head())
     
     # Debugging: Check price_data_df after loading
     #st.write("Loaded price_data_df with latest date (dynamic):", price_data_df.head())
     
-    merged_data_df = merged_data_df.drop_duplicates(subset='ASIN')
-    merged_data_df = merged_data_df.set_index('ASIN', sorted=False, drop=False).persist()
-    st.write("Printing the merged_data_df:" ,merged_data_df.divisions)
+    # merged_data_df = merged_data_df.drop_duplicates(subset='ASIN')
+    # merged_data_df = merged_data_df.set_index('ASIN', sorted=False, drop=False).persist()
+    # st.write("Printing the merged_data_df:" ,merged_data_df.divisions)
    
-    # Parse dictionary columns
-    for col in ['Product Details', 'Glance Icon Details', 'Option', 'Drop Down']:
-            merged_data_df[col] = merged_data_df[col].map_partitions(
-                lambda df: df.apply(lambda x: parse_dict_str(x) if isinstance(x, str) else x)
-            )
+    # # Parse dictionary columns
+    # for col in ['Product Details', 'Glance Icon Details', 'Option', 'Drop Down']:
+    #         merged_data_df[col] = merged_data_df[col].map_partitions(
+    #             lambda df: df.apply(lambda x: parse_dict_str(x) if isinstance(x, str) else x)
+    #         )
     
-    # Debugging: Verify parsing applied to merged_data_df
-    st.write("Merged data after parsing columns:", 
-             merged_data_df[['Product Details', 'Glance Icon Details', 'Option', 'Drop Down']].head())
+    # # Debugging: Verify parsing applied to merged_data_df
+    # st.write("Merged data after parsing columns:", 
+    #          merged_data_df[['Product Details', 'Glance Icon Details', 'Option', 'Drop Down']].head())
     
-    def safe_parse_dict_str(df):
-    # Ensure each partition is processed consistently
-        return df.apply(lambda x: parse_dict_str(x) if isinstance(x, str) else x)
+    # def safe_parse_dict_str(df):
+    # # Ensure each partition is processed consistently
+    #     return df.apply(lambda x: parse_dict_str(x) if isinstance(x, str) else x)
 
-    merged_data_df[col] = merged_data_df[col].map_partitions(safe_parse_dict_str)
+    # merged_data_df[col] = merged_data_df[col].map_partitions(safe_parse_dict_str)
 
-    # Print out partition information
-    for partition in merged_data_df.partitions:
-        print(partition.head())
+    # # Print out partition information
+    # for partition in merged_data_df.partitions:
+    #     print(partition.head())
 
-    merged_data_df[col] = merged_data_df[col].map_partitions(safe_parse_dict_str).compute()
+    # merged_data_df[col] = merged_data_df[col].map_partitions(safe_parse_dict_str).compute()
 
-    merged_data_df['Style'] = merged_data_df['product_title'].map_partitions(lambda df: df.apply(extract_style))
-    merged_data_df['Size'] = merged_data_df['product_title'].map_partitions(lambda df: df.apply(extract_size))
+    # merged_data_df['Style'] = merged_data_df['product_title'].map_partitions(lambda df: df.apply(extract_style))
+    # merged_data_df['Size'] = merged_data_df['product_title'].map_partitions(lambda df: df.apply(extract_size))
 
-    def update_product_details(row):
-        details = row['Product Details'] if isinstance(row['Product Details'], dict) else {}
-        details['Style'] = row['Style']
-        details['Size'] = row['Size']
-        return details
+    # def update_product_details(row):
+    #     details = row['Product Details'] if isinstance(row['Product Details'], dict) else {}
+    #     details['Style'] = row['Style']
+    #     details['Size'] = row['Size']
+    #     return details
 
-    merged_data_df['Product Details'] = merged_data_df.apply(update_product_details, axis=1, meta=('x', 'object'))
+    # merged_data_df['Product Details'] = merged_data_df.apply(update_product_details, axis=1, meta=('x', 'object'))
 
-    # Extract dimensions and fill in missing values
-    merged_data_df['Product Dimensions'] = merged_data_df['Product Details'].map_partitions(
-            lambda df: df.apply(lambda details: details.get('Product Dimensions', None) if isinstance(details, dict) else None)
-        )
+    # # Extract dimensions and fill in missing values
+    # merged_data_df['Product Dimensions'] = merged_data_df['Product Details'].map_partitions(
+    #         lambda df: df.apply(lambda details: details.get('Product Dimensions', None) if isinstance(details, dict) else None)
+    #     )
 
-    # Reference Data Merge
-    reference_df = pd.read_csv('product_dimension_size_style_reference.csv')
-    merged_data_df = merged_data_df.merge(
-        dd.from_pandas(reference_df, npartitions=1),
-        on='Product Dimensions', how='left', suffixes=('', '_ref')
-        )
+    # # Reference Data Merge
+    # reference_df = pd.read_csv('product_dimension_size_style_reference.csv')
+    # merged_data_df = merged_data_df.merge(
+    #     dd.from_pandas(reference_df, npartitions=1),
+    #     on='Product Dimensions', how='left', suffixes=('', '_ref')
+    #     )
         
-    merged_data_df['Size'] = merged_data_df['Size'].fillna(merged_data_df['Size_ref'])
-    merged_data_df['Style'] = merged_data_df['Style'].fillna(merged_data_df['Style_ref'])
+    # merged_data_df['Size'] = merged_data_df['Size'].fillna(merged_data_df['Size_ref'])
+    # merged_data_df['Style'] = merged_data_df['Style'].fillna(merged_data_df['Style_ref'])
 
-    # Compute Dask DataFrames after transformations
-    merged_data_df = merged_data_df.compute()
+    # # Compute Dask DataFrames after transformations
+    # merged_data_df = merged_data_df.compute()
     
-    return asin_keyword_df, keyword_id_df, merged_data_df, price_data_df
+    # return asin_keyword_df, keyword_id_df, merged_data_df, price_data_df
 
 asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = load_and_preprocess_data()
 

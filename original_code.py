@@ -1267,22 +1267,30 @@ if st.session_state['show_features_clicked'] and asin in merged_data_df['ASIN'].
 compulsory_features_vars = {}
 if asin in merged_data_df['ASIN'].values:
     product_details = merged_data_df[merged_data_df['ASIN'] == asin].iloc[0]['Product Details']
-    # Check if 'Product Details' is a string, and attempt to parse it as JSON if it is
-    if isinstance(product_details, str):
+    # Check if 'Product Details' is a valid dictionary or try to convert if it's a string
+    if isinstance(product_details, dict):
+        st.write("Product details loaded successfully:")
+    elif isinstance(product_details, str):
         try:
             product_details = json.loads(product_details)  # Try to convert string to dictionary
+            st.write("Product details successfully parsed from string:")
         except (json.JSONDecodeError, TypeError):
-            product_details = {}  # If conversion fails, fallback to an empty dictionary
+            product_details = {}  # Invalid format, set to empty dict
+            st.write("Product details could not be parsed. Defaulting to empty.")
+    else:
+        product_details = {}  # Invalid format, set to empty dict
+        st.write("Product details are not available or in an invalid format. Defaulting to empty.")
 
-    # Ensure 'product_details' is now a dictionary
-    if isinstance(product_details, dict):
+    # If product_details is a valid dictionary, show checkboxes for each feature
+    if product_details:
         st.write("Select compulsory features:")
         for feature in product_details.keys():
             compulsory_features_vars[feature] = st.checkbox(f"Include {feature}", key=f"checkbox_{feature}")
     else:
-        st.write("Product details are not available or could not be parsed.")
+        st.write("No valid product details available for the selected ASIN.")
 else:
     st.write(f"ASIN {asin} not found in the data.")
+
 
 # Collect selected compulsory features
 compulsory_features = [feature for feature, selected in compulsory_features_vars.items() if selected]

@@ -272,9 +272,11 @@ s3_client = boto3.client(
 )
 bucket_name = 'anarix-cpi'
 s3_folder = 'NAPQUEEN/'
+price_data_prefix = "napqueen_price_tracker"
+static_file_name = "NAPQUEEN.csv"
 
 
-def get_latest_file_from_s3(prefix):
+def get_latest_file_from_s3(s3_folder, prefix):
     """Fetches the latest file based on LastModified timestamp for a given prefix."""
     response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=s3_folder)
     all_files = [
@@ -292,79 +294,51 @@ def get_latest_file_from_s3(prefix):
     return latest_file
 
 @delayed
-def load_latest_csv_from_s3(prefix):
+def load_latest_csv_from_s3(s3_folder, prefix):
     """Loads the latest CSV file for a given prefix."""
-    latest_file_key = get_latest_file_from_s3(prefix)
+    latest_file_key = get_latest_file_from_s3(s3_folder, prefix)
     obj = s3_client.get_object(Bucket=bucket_name, Key=latest_file_key)
-    #byte_stream = io.BytesIO(obj['Body'])
-    #return dd.read_csv(byte_stream, low_memory=False)
     return pd.read_csv(obj['Body'], low_memory=False)
 
 
 @delayed
-def load_static_file_from_s3(file_name):
+def load_static_file_from_s3(s3_folder, file_name):
     """Loads a static CSV file from S3 without searching for latest version."""
     s3_key = f"{s3_folder}{file_name}"
     obj = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
-    #byte_stream_2 = io.BytesIO(obj['Body'])
-    #return dd.read_csv(byte_stream_2, low_memory=False, on_bad_lines='skip')
     return pd.read_csv(obj['Body'], low_memory=False, on_bad_lines='skip')
 
 @st.cache_data
-def load_and_preprocess_data():
-    asin_keyword_df = load_latest_csv_from_s3('asin_keyword_id_mapping').compute()
-    #st.write("Loaded asin_keyword_df:", asin_keyword_df.head())
-    keyword_id_df = load_latest_csv_from_s3('keyword_x_keyword_id').compute()
-    #st.write("Loaded keyword_id_df:", keyword_id_df.head())
+def load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix):
+    asin_keyword_df = load_latest_csv_from_s3(s3_folder, 'asin_keyword_id_mapping').compute()
+    keyword_id_df = load_latest_csv_from_s3(s3_folder, 'keyword_x_keyword_id').compute()
 
-     # Debugging: Verify static files loaded
-    #st.write("Loaded asin_keyword_df from S3 (static):", asin_keyword_df.head())
-    #st.write("Loaded keyword_id_df from S3 (static):", keyword_id_df.head())
-    
-    df_scrapped = load_static_file_from_s3('NAPQUEEN.csv').compute()
-    #st.write("Loaded df_scrapped (NAPQUEEN.csv):", df_scrapped.head())
+    df_scrapped = load_static_file_from_s3(s3_folder, static_file_name).compute()
+    st.write("Loaded df_scrapped (NAPQUEEN.csv):", df_scrapped.head())
+
     df_scrapped['ASIN'] = df_scrapped['ASIN'].str.upper()
     df_scrapped_cleaned = df_scrapped.drop_duplicates(subset='ASIN')
-    #st.write("Cleaned df_scrapped (NAPQUEEN.csv):", df_scrapped_cleaned.head())
 
-    # Load dynamic files with latest dates
-    merged_data_delayed = load_latest_csv_from_s3('merged_data_')
-    #st.write("Latest merged_data file name loaded:", merged_data_df.head())
+    # Load dynamic files with latest dates using delayed Dask tasks
+    merged_data_delayed = delayed(load_latest_csv_from_s3(s3_folder, 'merged_data_'))
     merged_data_df = dd.from_delayed([delayed(merged_data_delayed)])
+    st.write("Latest merged_data file name loaded:", merged_data_df.head())
+
     merged_data_df = merged_data_df.rename(columns={"ASIN": "asin", "title": "product_title"})
     merged_data_df['asin'] = merged_data_df['asin'].str.upper()
     merged_data_df['ASIN'] = merged_data_df['asin']
 
-    # Define a function to fill missing brands
     def fill_missing_brand(df):
-            missing_brand_mask = df['brand'].isna() | (df['brand'] == "")
-            df.loc[missing_brand_mask, 'brand'] = df.loc[missing_brand_mask, 'product_title'].apply(extract_brand_from_title)
-            return df
+        missing_brand_mask = df['brand'].isna() | (df['brand'] == "")
+        df.loc[missing_brand_mask, 'brand'] = df.loc[missing_brand_mask, 'product_title'].apply(extract_brand_from_title)
+        return df
 
     # Apply function across partitions
     merged_data_df = merged_data_df.map_partitions(fill_missing_brand)
 
-    #st.write("Loaded and processed merged_data_df:", merged_data_df.head())
-    #merged_data_df['price'] = dd.to_numeric(merged_data_df['price'], errors='coerce')
-    # Ensure ASIN consistency across both DataFrames
-    df_scrapped_cleaned['ASIN'] = df_scrapped_cleaned['ASIN'].str.strip().str.upper()
-    merged_data_df['asin'] = merged_data_df['asin'].str.strip().str.upper()
-
-    # Debugging: Check the columns and missing values before merging
-    #st.write("Columns in df_scrapped_cleaned:", df_scrapped_cleaned.columns)
-    #st.write("Columns in merged_data_df:", merged_data_df.columns)
-    #st.write("Missing values in df_scrapped_cleaned ASIN:", df_scrapped_cleaned['ASIN'].isna().sum())
-    #st.write("Missing values in merged_data_df (asin, brand, product_title, price, date):", merged_data_df[['asin', 'brand', 'product_title', 'price', 'date']].isna().sum())
-
-    #merged_data_df = dd.merge(df_scrapped_cleaned, merged_data_df[['asin', 'brand', 'product_title', 'price', 'date']], left_on='ASIN', right_on='asin', how='left')
-    #st.write("Merged df_scrapped_cleaned with merged_data_df:", merged_data_df.head())
-    # Debugging: Check merged_data_df after renaming and modifying 'asin'
-    #st.write("Loaded merged_data_df with latest date (dynamic):", merged_data_df.head())
-    #merged_data_df = merged_data_df.compute()
-    
     merged_data_df['price'] = dd.to_numeric(merged_data_df['price'], errors='coerce')
     merged_data_df = dd.merge(
-            df_scrapped_cleaned,
+        df_scrapped_cleaned,
             merged_data_df[['asin', 'brand', 'product_title', 'price', 'date']],
             left_on='ASIN', right_on='asin', how='left'
         )
@@ -380,100 +354,36 @@ def load_and_preprocess_data():
     merged_data_df['Size'] = merged_data_df['product_title'].apply(extract_size)
 
     def update_product_details(row):
-            details = row['Product Details']
-            details['Style'] = row['Style']
-            details['Size'] = row['Size']
-            return details
+        details = row['Product Details']
+        details['Style'] = row['Style']
+        details['Size'] = row['Size']
+        return details
 
     merged_data_df['Product Details'] = merged_data_df.apply(update_product_details, axis=1)
 
     def extract_dimensions(details):
-            # Check if 'Product Dimensions' exists in the dictionary
-            if isinstance(details, dict):
-               return details.get('Product Dimensions', None)
-            return None
+        # Check if 'Product Dimensions' exists in the dictionary
+        if isinstance(details, dict):
+            return details.get('Product Dimensions', None)
+        return None
 
-        # Create a new column 'Product Dimensions' by extracting from 'Product Details'
+    # Create a new column 'Product Dimensions' by extracting from 'Product Details'
     merged_data_df['Product Dimensions'] = merged_data_df['Product Details'].apply(extract_dimensions)
 
     reference_df = pd.read_csv('product_dimension_size_style_reference.csv')
 
     merged_data_df = merged_data_df.merge(reference_df, on='Product Dimensions', how='left', suffixes=('', '_ref'))
 
-        # Fill missing values in 'Size' and 'Style' columns with the values from the reference DataFrame
+    # Fill missing values in 'Size' and 'Style' columns with the values from the reference DataFrame
     merged_data_df['Size'] = merged_data_df['Size'].fillna(merged_data_df['Size_ref'])
     merged_data_df['Style'] = merged_data_df['Style'].fillna(merged_data_df['Style_ref'])
-    price_data_df = load_latest_csv_from_s3('napqueen_price_tracker').compute()
-    
-    return asin_keyword_df, keyword_id_df, merged_data_df, price_data_df
-    #st.write("Loaded price_data_df (napqueen_price_tracker):", price_data_df.head())
-    
-    # Debugging: Check price_data_df after loading
-    #st.write("Loaded price_data_df with latest date (dynamic):", price_data_df.head())
-    
-    # merged_data_df = merged_data_df.drop_duplicates(subset='ASIN')
-    # merged_data_df = merged_data_df.set_index('ASIN', sorted=False, drop=False).persist()
-    # st.write("Printing the merged_data_df:" ,merged_data_df.divisions)
-   
-    # # Parse dictionary columns
-    # for col in ['Product Details', 'Glance Icon Details', 'Option', 'Drop Down']:
-    #         merged_data_df[col] = merged_data_df[col].map_partitions(
-    #             lambda df: df.apply(lambda x: parse_dict_str(x) if isinstance(x, str) else x)
-    #         )
-    
-    # # Debugging: Verify parsing applied to merged_data_df
-    # st.write("Merged data after parsing columns:", 
-    #          merged_data_df[['Product Details', 'Glance Icon Details', 'Option', 'Drop Down']].head())
-    
-    # def safe_parse_dict_str(df):
-    # # Ensure each partition is processed consistently
-    #     return df.apply(lambda x: parse_dict_str(x) if isinstance(x, str) else x)
-
-    # merged_data_df[col] = merged_data_df[col].map_partitions(safe_parse_dict_str)
-
-    # # Print out partition information
-    # for partition in merged_data_df.partitions:
-    #     print(partition.head())
-
-    # merged_data_df[col] = merged_data_df[col].map_partitions(safe_parse_dict_str).compute()
-
-    # merged_data_df['Style'] = merged_data_df['product_title'].map_partitions(lambda df: df.apply(extract_style))
-    # merged_data_df['Size'] = merged_data_df['product_title'].map_partitions(lambda df: df.apply(extract_size))
-
-    # def update_product_details(row):
-    #     details = row['Product Details'] if isinstance(row['Product Details'], dict) else {}
-    #     details['Style'] = row['Style']
-    #     details['Size'] = row['Size']
-    #     return details
-
-    # merged_data_df['Product Details'] = merged_data_df.apply(update_product_details, axis=1, meta=('x', 'object'))
-
-    # # Extract dimensions and fill in missing values
-    # merged_data_df['Product Dimensions'] = merged_data_df['Product Details'].map_partitions(
-    #         lambda df: df.apply(lambda details: details.get('Product Dimensions', None) if isinstance(details, dict) else None)
-    #     )
-
-    # # Reference Data Merge
-    # reference_df = pd.read_csv('product_dimension_size_style_reference.csv')
-    # merged_data_df = merged_data_df.merge(
-    #     dd.from_pandas(reference_df, npartitions=1),
-    #     on='Product Dimensions', how='left', suffixes=('', '_ref')
-    #     )
         
-    # merged_data_df['Size'] = merged_data_df['Size'].fillna(merged_data_df['Size_ref'])
-    # merged_data_df['Style'] = merged_data_df['Style'].fillna(merged_data_df['Style_ref'])
-
-    # # Compute Dask DataFrames after transformations
-    # merged_data_df = merged_data_df.compute()
-    
-    # return asin_keyword_df, keyword_id_df, merged_data_df, price_data_df
+    price_data_df = load_latest_csv_from_s3(s3_folder, price_data_prefix).compute()
+    st.write("Loaded price_data_df (napqueen_price_tracker):", price_data_df.head())
+        
+    return asin_keyword_df, keyword_id_df, merged_data_df, price_data_df
 
 asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = load_and_preprocess_data()
-
-# Only load data once at the beginning, using st.session_state to store it
-#if 'loaded_data' not in st.session_state:
-    #st.session_state['loaded_data'] = load_and_preprocess_data()
-#asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = st.session_state['loaded_data']
 
 # Use session state to store the DataFrame and ensure it's available across sessions
 if 'show_features_df' not in st.session_state:
@@ -507,8 +417,6 @@ def safe_literal_eval(val):
     return val
 
 def find_similar_asins(input_asin, asin_keyword_df):
-    # Get the keyword_id_list for the input asin
-    #df_grouped = pd.read_csv("asin_keyword_id_mapping.csv")
 
     # Convert keyword_id_list column from string representation to actual lists
     asin_keyword_df['keyword_id_list'] = asin_keyword_df['keyword_id_list'].apply(safe_literal_eval)
@@ -631,20 +539,6 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
     similarities = similarities[:100]  # Limit to top 100 results
     print(len(similarities))
 
-    # Optionally, save to CSV or display in Streamlit
-    #similarities_df = pd.DataFrame(similarities, columns=[
-     #   'ASIN', 'Product Title', 'Price', 'Brand'
-    #])
-    #st.dataframe(similarities_df)
-    #similarity_df = similarities_df.to_csv('similarity_df.csv')
-    #st.download_button(
-     #   label=f"Download Competitor Details",
-     #   data=similarity_df,
-      #  file_name=f"similarity_df.csv",
-       # mime='text/csv',
-        #key=f"download_button_{asin}_{date}"  # Ensure this key is unique
-    #)
-
     return similarities
 
 
@@ -680,20 +574,6 @@ def run_analysis(asin, price_min, price_max, target_price, compulsory_features, 
     competitor_details_df = competitor_details_df[['ASIN', 'Title', 'Price', 'Product Dimension', 'Brand', 'Matching Features']]
     date = merged_data_df['date'].max().strftime('%Y-%m-%d')
     competitor_details_df['date'] = date
-
-    # Display competitor details in Streamlit
-    #st.write("Competitor Details:")
-    #st.dataframe(competitor_details_df)
-
-    #competitor_csv = competitor_details_df.to_csv(index=False)
-    
-    #st.download_button(
-        #label=f"Download Competitor Details for {asin}",
-        #data=competitor_csv,
-        #file_name=f"{asin}_competitor_details_{date}.csv",
-        #mime='text/csv',
-        #key=f"download_button_{asin}_{date}"  # Ensure this key is unique
-    #)
 
     return asin, target_price, cpi_score, num_competitors_found, size, product_dimension, prices, competitor_details_df, cpi_score_dynamic
 
@@ -748,8 +628,6 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     weighted_scores = [p[3] for p in similar_products]
     product_titles = [p[1] for p in similar_products]
     asin_list = [p[0] for p in similar_products]
-    #sizes = [p[7].get('Size', 'N/A') for p in similar_products]
-    #styles = [p[7].get('Style', 'N/A') for p in similar_products]
 
     # Create DataFrame for competitors in scatter plot
     scatter_competitors_df = pd.DataFrame(similar_products, columns=[
@@ -939,11 +817,6 @@ def calculate_and_plot_cpi(merged_data_df, price_data_df, asin_list, start_date,
     compulsory_keywords = st.session_state.get('compulsory_keywords', [])
 
     combined_competitor_df = pd.DataFrame()
-    # Initialize session state variables
-    #if 'result_df' not in st.session_state:
-     #   st.session_state['result_df'] = None
-    #if 'competitor_files' not in st.session_state:
-        #st.session_state['competitor_files'] = {}
 
     # Detect changes in inputs and set recompute flag
     if st.session_state.get('recompute', False) or st.button('Run Analysis Again'):
@@ -968,21 +841,10 @@ def calculate_and_plot_cpi(merged_data_df, price_data_df, asin_list, start_date,
                 daily_results = result['result'][:-1]
                 daily_null_count = result['daily_null_count']
                 num_competitors_found = result['num_competitors_found']
-                
-                # Debug: Log each day's CPI score and competitor prices
-                #st.write(f"Date: {result['date']} - CPI Score:", daily_results[3])
-                #st.write(f"Date: {result['date']} - Competitor Prices:", daily_results[6])
 
                 all_results.append((result['date'], *daily_results))
                 competitor_count_per_day.append(num_competitors_found)
                 null_price_count_per_day.append(daily_null_count)
-
-                # Save competitors data to CSV immediately and store in session_state
-                #competitor_details_df = result['competitors']
-                #date_str = result['date'].strftime('%Y-%m-%d')
-                #csv_filename = f"competitors_{asin}_{date_str}.csv"
-                #competitor_details_df.to_csv(csv_filename, index=False)
-                #st.session_state['competitor_files'][date_str] = csv_filename
 
                 # Append each day's competitor details to the combined DataFrame
                 competitor_details_df = result['competitors']
@@ -1047,17 +909,6 @@ def calculate_and_plot_cpi(merged_data_df, price_data_df, asin_list, start_date,
     st.subheader("Time-Series Analysis Results")
     plot_results(result_df, asin_list, start_date, end_date)
 
-    # Now, display each CSV file for the respective dates one by one
-    #st.subheader("Competitor Data for Each Day")
-    #for date_str, csv_filename in st.session_state['competitor_files'].items():
-        #st.write(f"Competitor Data for {date_str}")
-        #try:
-            # Load and display the CSV file for this date
-            #competitor_data = pd.read_csv(csv_filename)
-            #st.dataframe(competitor_data)
-        #except Exception as e:
-            #st.error(f"Error loading file for {date_str}: {e}")
-
     if not combined_competitor_df.empty:
         st.subheader("Combined Competitor Data for Selected Date Range")
         st.dataframe(combined_competitor_df)
@@ -1097,10 +948,6 @@ def plot_competitor_vs_null_analysis(competitor_count_per_day, null_price_count_
 
 
 def plot_results(result_df, asin_list, start_date, end_date):
-
-
-    #result_df.to_csv('plot_csv.csv')
-
 
     for asin in asin_list:
         asin_results = result_df[result_df['ASIN'] == asin]
@@ -1379,9 +1226,6 @@ if keyword_option == 'Include Keywords':
         # Update selected keyword IDs based on user selection
         selected_keyword_ids = [keyword_mapping[keyword] for keyword in selected_keywords]
 
-        # Merge the selected keywords with words entered manually
-        #all_keywords = compulsory_keywords + selected_keywords
-
         # Store selected keyword IDs in session state
         st.session_state['selected_keyword_ids'] = selected_keyword_ids
 
@@ -1397,41 +1241,6 @@ else:
 def get_selected_keyword_ids():
     # Simply return the keyword IDs stored in session state
     return st.session_state.get('selected_keyword_ids', [])
-
-#def update_keyword_ids(asin, instance_id=None):
-    # Load keyword IDs based on the input ASIN
-    #keyword_ids = load_keyword_ids(asin)
-    # Map the loaded keyword IDs to their corresponding keywords
-    #keyword_options = [keyword for keyword, id in keyword_mapping.items() if id in keyword_ids]
-    #if not keyword_options:
-        #st.write(f"No keywords found for ASIN: {asin}")
-        #return []
-    # Initialize session state for checkboxes if not already done
-    #if 'checkbox_states' not in st.session_state:
-        #st.session_state['checkbox_states'] = {}
-    # Dictionary to store selected keywords
-    #selected_keywords = []
-    # Display each keyword option as a checkbox
-    #for keyword in keyword_options:
-        # Generate a unique key based on ASIN and keyword
-        #unique_key = f"{asin}_{keyword}_{instance_id}"  
-        # Initialize checkbox state in session_state if not already present
-        #if unique_key not in st.session_state['checkbox_states']:
-            #st.session_state['checkbox_states'][unique_key] = False
-        # Create checkbox and update session state based on user input
-        #st.session_state['checkbox_states'][unique_key] = st.checkbox(
-            #f"Select {keyword}", 
-            #value=st.session_state['checkbox_states'][unique_key],
-            #key=unique_key
-        #)
-        # If the checkbox is selected, add it to the selected keywords list
-        #if st.session_state['checkbox_states'][unique_key]:
-            #selected_keywords.append(keyword)
-    # Update selected keyword IDs based on user selection
-    #selected_keyword_ids = [keyword_mapping[keyword] for keyword in selected_keywords]
-    # Store selected keyword IDs in session state
-    #st.session_state['selected_keyword_ids'] = selected_keyword_ids
-    #return selected_keyword_ids
 
 # Store input values in session state for use in re-runs
 if 'asin_list' not in st.session_state:

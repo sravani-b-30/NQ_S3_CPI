@@ -314,7 +314,7 @@ def load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix):
     keyword_id_df = load_latest_csv_from_s3(s3_folder, 'keyword_x_keyword_id').compute()
 
     df_scrapped = load_static_file_from_s3(s3_folder, static_file_name).compute()
-    st.write("Loaded df_scrapped (NAPQUEEN.csv):", df_scrapped.head())
+    #st.write("Loaded df_scrapped (NAPQUEEN.csv):", df_scrapped.head())
 
     df_scrapped['ASIN'] = df_scrapped['ASIN'].str.upper()
     df_scrapped_cleaned = df_scrapped.drop_duplicates(subset='ASIN')
@@ -322,7 +322,7 @@ def load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix):
     # Load dynamic files with latest dates using delayed Dask tasks
     merged_data_delayed = delayed(load_latest_csv_from_s3(s3_folder, 'merged_data_'))
     merged_data_df = dd.from_delayed([delayed(merged_data_delayed)])
-    st.write("Latest merged_data file name loaded:", merged_data_df.head())
+    #st.write("Latest merged_data file name loaded:", merged_data_df.head())
 
     merged_data_df = merged_data_df.rename(columns={"ASIN": "asin", "title": "product_title"})
     merged_data_df['asin'] = merged_data_df['asin'].str.upper()
@@ -379,7 +379,7 @@ def load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix):
     merged_data_df['Style'] = merged_data_df['Style'].fillna(merged_data_df['Style_ref'])
         
     price_data_df = load_latest_csv_from_s3(s3_folder, price_data_prefix).compute()
-    st.write("Loaded price_data_df (napqueen_price_tracker):", price_data_df.head())
+    #st.write("Loaded price_data_df (napqueen_price_tracker):", price_data_df.head())
         
     return asin_keyword_df, keyword_id_df, merged_data_df, price_data_df
 

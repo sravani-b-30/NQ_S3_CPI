@@ -449,11 +449,46 @@ def find_similar_asins(input_asin, asin_keyword_df):
 
     return similar_asins
 
+def find_dissimilar_asins(input_asin, asin_keyword_df):
+
+    # Convert keyword_id_list column from string representation to actual lists
+    asin_keyword_df['keyword_id_list'] = asin_keyword_df['keyword_id_list'].apply(safe_literal_eval)
+
+    input_keyword_id_list = asin_keyword_df.loc[asin_keyword_df['asin'] == input_asin, 'keyword_id_list'].values
+
+    # Check if the ASIN exists in the data
+    if len(input_keyword_id_list) == 0:
+        print(f"ASIN {input_asin} not found in the data.")
+        return []
+
+    # Remove the nested structure (since input_keyword_id_list is wrapped inside another list)
+    input_keyword_id_list = input_keyword_id_list[0]
+
+    # Convert the input keyword_id_list into a set for comparison
+    input_keyword_id_set = set(st.session_state.get('selected_keyword_ids', []))
+    # Initialize a list to store similar ASINs
+    dissimilar_asins = []
+
+    # Loop through other ASINs and check for any keyword_id overlap
+    for idx, row in asin_keyword_df.iterrows():
+        # Skip the input ASIN itself
+        if row['asin'] == input_asin:
+            continue
+
+        # Convert the current ASIN's keyword_id_list to a set and check for intersection
+        row_keyword_id_set = set(row['keyword_id_list'])
+        if not input_keyword_id_set.intersection(row_keyword_id_set):
+            dissimilar_asins.append(row['asin'])
+
+    return dissimilar_asins
+
 
 def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory_features, same_brand_option, compulsory_keywords):
     # If the user selected "Include Keywords", find similar ASINs
     if keyword_option == 'Include Keywords':
         similar_asin_list = find_similar_asins(asin, asin_keyword_df)
+    elif keyword_option == 'Negate Keywords':
+        similar_asin_list = find_dissimilar_asins(asin, asin_keyword_df)
     else:
         similar_asin_list = []  # No filtering based on ASINs if "No Keywords" is selected
 
@@ -497,6 +532,26 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
 
             # Append product to similarities based on keyword filtering option
             if keyword_option == 'Include Keywords':
+                # Check if the product matches the ASIN list and has all keywords present in the title
+                #all_keywords_present = all(keyword.lower() in compare_title for keyword in compulsory_keywords)
+                if compulsory_match and (row['ASIN'] in similar_asin_list) and all_keywords_present:
+                    # Append the product to the similarities list
+                    asin = row['ASIN']
+                    combination = (compare_title, row['price'], str(compare_details))
+                    if combination not in seen_combinations and asin not in unique_asins:
+                        details_score, title_score, desc_score, details_comparison, title_comparison, desc_comparison = calculate_similarity(
+                            target_details, compare_details, target_title, compare_title, target_desc, compare_desc
+                        )
+                        weighted_score = calculate_weighted_score(details_score, title_score, desc_score)
+                        if weighted_score > 0:
+                            similarities.append(
+                                (asin, row['product_title'], row['price'], weighted_score, details_score,
+                                 title_score, desc_score, compare_details, details_comparison, title_comparison,
+                                 desc_comparison, compare_brand)
+                            )
+                        unique_asins.add(asin)
+                        seen_combinations.add(combination)
+            elif keyword_option == 'Negate Keywords':
                 # Check if the product matches the ASIN list and has all keywords present in the title
                 #all_keywords_present = all(keyword.lower() in compare_title for keyword in compulsory_keywords)
                 if compulsory_match and (row['ASIN'] in similar_asin_list) and all_keywords_present:
@@ -1186,7 +1241,7 @@ keyword_mapping = load_keyword_mapping(keyword_id_df)
 # Add a radio button for keyword-based filtering
 keyword_option = st.radio(
     "Would you like to include keywords in filtering?",
-    ('No Keywords', 'Include Keywords')
+    ('No Keywords', 'Include Keywords', 'Negate Keywords')
 )
 
 def get_words_in_title(asin=None):
@@ -1209,6 +1264,31 @@ compulsory_keywords = get_words_in_title(asin)
 
 # If the user selects "Include Keywords", allow them to select keywords from multi-select
 if keyword_option == 'Include Keywords':
+    def update_keyword_ids(asin):
+        # Load keyword IDs based on the input ASIN
+        keyword_ids = load_keyword_ids(asin, asin_keyword_df)
+
+        # Map the loaded keyword IDs to their corresponding keywords
+        keyword_options = [keyword for keyword, id in keyword_mapping.items() if id in keyword_ids]
+
+        if not keyword_options:
+            st.write(f"No keywords found for ASIN: {asin}")
+            return []
+
+        # Display multi-select box for keyword options
+        selected_keywords = st.multiselect("Select Keywords for the given ASIN", options=keyword_options)
+
+        # Update selected keyword IDs based on user selection
+        selected_keyword_ids = [keyword_mapping[keyword] for keyword in selected_keywords]
+
+        # Store selected keyword IDs in session state
+        st.session_state['selected_keyword_ids'] = selected_keyword_ids
+
+        return selected_keywords 
+    
+    if asin:
+        selected_keywords = update_keyword_ids(asin)
+elif keyword_option == 'Negate Keywords':
     def update_keyword_ids(asin):
         # Load keyword IDs based on the input ASIN
         keyword_ids = load_keyword_ids(asin, asin_keyword_df)

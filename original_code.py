@@ -1141,7 +1141,7 @@ df = load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix)
 def load_keyword_ids(input_asin, asin_keyword_df):
     # Load ASIN to keyword ID mapping
     df_grouped = asin_keyword_df
-    df_grouped['keyword_id_list'] = df_grouped['keyword_id_list'].apply(ast.literal_eval)
+    df_grouped['keyword_id_list'] = df_grouped['keyword_id_list'].apply(safe_literal_eval)
 
     # Fetch the keyword ID list based on the input ASIN
     input_keyword_id_list = df_grouped.loc[df_grouped['asin'] == input_asin, 'keyword_id_list'].values

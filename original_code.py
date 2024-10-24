@@ -693,24 +693,24 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     product_titles = [p[1] for p in similar_products]
     asin_list = [p[0] for p in similar_products]
 
-    # Create DataFrame for competitors in scatter plot
-    # scatter_competitors_df = pd.DataFrame(similar_products, columns=[
-    #     'ASIN', 'Title', 'Price', 'Weighted Score', 'Details Score', 
-    #     'Title Score', 'Description Score', 'Product Details', 
-    #     'Details Comparison', 'Title Comparison', 'Description Comparison', 'Brand'
-    # ])
+    #Create DataFrame for competitors in scatter plot
+    scatter_competitors_df = pd.DataFrame(similar_products, columns=[
+        'ASIN', 'Title', 'Price', 'Weighted Score', 'Details Score', 
+        'Title Score', 'Description Score', 'Product Details', 
+        'Details Comparison', 'Title Comparison', 'Description Comparison', 'Brand'
+    ])
     
-    # # Extract Product Dimension and Matching Features
-    # scatter_competitors_df['Product Dimension'] = scatter_competitors_df['Product Details'].apply(
-    #     lambda details: details.get('Product Dimensions', 'N/A'))
+    # Extract Product Dimension and Matching Features
+    scatter_competitors_df['Product Dimension'] = scatter_competitors_df['Product Details'].apply(
+        lambda details: details.get('Product Dimensions', 'N/A'))
     
-    # # Add matching compulsory features
-    # scatter_competitors_df['Matching Features'] = scatter_competitors_df['Product Details'].apply(
-    #     lambda details: {feature: details.get(feature, 'N/A') for feature in compulsory_features}
-    # )
+    # Add matching compulsory features
+    scatter_competitors_df['Matching Features'] = scatter_competitors_df['Product Details'].apply(
+        lambda details: {feature: details.get(feature, 'N/A') for feature in compulsory_features}
+    )
 
-    # # Filter the dataframe to include only the required columns
-    # scatter_competitors_df = scatter_competitors_df[['ASIN', 'Title', 'Price', 'Product Dimension', 'Brand', 'Matching Features']]
+    # Filter the dataframe to include only the required columns
+    scatter_competitors_df = scatter_competitors_df[['ASIN', 'Title', 'Price', 'Product Dimension', 'Brand', 'Matching Features']]
     
     # Plot using Plotly
     fig = go.Figure()
@@ -771,18 +771,18 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     st.write(f"**Competitor Count**: {competitor_count}")
     st.write(f"**Number of Competitors with Null Price**: {price_null_count}")
     
-    # # Save the competitor DataFrame as a CSV
-    # scatter_competitors_filename = f"scatter_competitors_{asin}.csv"
-    # #scatter_competitors_df.to_csv(scatter_competitors_filename, index=False)
+    # Save the competitor DataFrame as a CSV
+    scatter_competitors_filename = f"scatter_competitors_{asin}.csv"
+    scatter_competitors_df.to_csv(scatter_competitors_filename, index=False)
 
-    # # Download button for competitor products in scatter plot
-    # with open(scatter_competitors_filename, 'rb') as file:
-    #     st.download_button(
-    #         label="Download Competitor Details from Scatter Plot Analysis",
-    #         data=file,
-    #         file_name=scatter_competitors_filename,
-    #         mime='text/csv'
-    #     )
+    # Download button for competitor products in scatter plot
+    with open(scatter_competitors_filename, 'rb') as file:
+        st.download_button(
+            label="Download Competitor Details from Scatter Plot Analysis",
+            data=file,
+            file_name=scatter_competitors_filename,
+            mime='text/csv'
+        )
 
     # CPI Score Polar Plot
     competitor_prices = np.array(prices)

@@ -483,7 +483,7 @@ def find_dissimilar_asins(input_asin, asin_keyword_df):
     return dissimilar_asins
 
 
-def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory_features, same_brand_option, compulsory_keywords):
+def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory_features, same_brand_option, compulsory_keywords, non_compulsory_keywords):
     # If the user selected "Include Keywords", find similar ASINs
     if keyword_option == 'Include Keywords':
         similar_asin_list = find_similar_asins(asin, asin_keyword_df)
@@ -527,14 +527,16 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
             if isinstance(title, str):
                 # Check if all keywords from compulsory_keywords are present in the title
                 all_keywords_present = all(keyword.lower() in title.lower() for keyword in compulsory_keywords)
+                any_excluded_word_present = any(exclude_keyword.lower() in compare_title for exclude_keyword in non_compulsory_keywords)
             else:
                 all_keywords_present = False  # Return False if the title is NaN or not a string
+                any_excluded_word_present = False
 
             # Append product to similarities based on keyword filtering option
             if keyword_option == 'Include Keywords':
                 # Check if the product matches the ASIN list and has all keywords present in the title
                 #all_keywords_present = all(keyword.lower() in compare_title for keyword in compulsory_keywords)
-                if compulsory_match and (row['ASIN'] in similar_asin_list) and all_keywords_present:
+                if compulsory_match and (row['ASIN'] in similar_asin_list) and all_keywords_present and any_excluded_word_present:
                     # Append the product to the similarities list
                     asin = row['ASIN']
                     combination = (compare_title, row['price'], str(compare_details))
@@ -552,9 +554,7 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
                         unique_asins.add(asin)
                         seen_combinations.add(combination)
             elif keyword_option == 'Negate Keywords':
-                # Check if the product matches the ASIN list and has all keywords present in the title
-                #all_keywords_present = all(keyword.lower() in compare_title for keyword in compulsory_keywords)
-                if compulsory_match and (row['ASIN'] in similar_asin_list) and all_keywords_present:
+                if compulsory_match and (row['ASIN'] in similar_asin_list) and all_keywords_present and any_excluded_word_present:
                     # Append the product to the similarities list
                     asin = row['ASIN']
                     combination = (compare_title, row['price'], str(compare_details))
@@ -573,7 +573,7 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
                         seen_combinations.add(combination)
             else:
                 # No keywords filtering, just use compulsory_match and add product directly
-                if compulsory_match:
+                if compulsory_match and all_keywords_present and any_excluded_word_present:
                     asin = row['ASIN']
                     combination = (compare_title, row['price'], str(compare_details))
                     if combination not in seen_combinations and asin not in unique_asins:
@@ -597,8 +597,8 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
     return similarities
 
 
-def run_analysis(asin, price_min, price_max, target_price, compulsory_features, same_brand_option, merged_data_df, compulsory_keywords):
-    similar_products = find_similar_products(asin, price_min, price_max, merged_data_df, compulsory_features, same_brand_option, compulsory_keywords)
+def run_analysis(asin, price_min, price_max, target_price, compulsory_features, same_brand_option, merged_data_df, compulsory_keywords, non_compulsory_keywords):
+    similar_products = find_similar_products(asin, price_min, price_max, merged_data_df, compulsory_features, same_brand_option, compulsory_keywords, non_compulsory_keywords)
     prices = [p[2] for p in similar_products]
     competitor_prices = np.array(prices)
     cpi_score = calculate_cpi_score(target_price, competitor_prices)
@@ -653,9 +653,9 @@ def show_features(asin):
 
     return product_details
 
-def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, merged_data_df, compulsory_keywords):
+def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, merged_data_df, compulsory_keywords, non_compulsory_keywords):
     # Find similar products
-    similar_products = find_similar_products(asin, price_min, price_max, merged_data_df, compulsory_features, same_brand_option, compulsory_keywords)
+    similar_products = find_similar_products(asin, price_min, price_max, merged_data_df, compulsory_features, same_brand_option, compulsory_keywords, non_compulsory_keywords)
 
     # Retrieve target product information
     target_product = merged_data_df[merged_data_df['ASIN'] == asin].iloc[0]
@@ -828,7 +828,7 @@ if 'competitor_files' not in st.session_state:
 if 'recompute' not in st.session_state:
     st.session_state['recompute'] = False
 
-def process_date(merged_data_df, asin, date_str, price_min, price_max, compulsory_features, same_brand_option, compulsory_keywords):
+def process_date(merged_data_df, asin, date_str, price_min, price_max, compulsory_features, same_brand_option, compulsory_keywords, non_compulsory_keywords):
     """
     This function processes data for a single date and returns the results.
     """
@@ -850,7 +850,7 @@ def process_date(merged_data_df, asin, date_str, price_min, price_max, compulsor
         return None
 
     # Calling run_analysis (assuming it's available and properly defined)
-    result = run_analysis(asin, price_min, price_max, target_price, compulsory_features, same_brand_option, df_current_day, compulsory_keywords)
+    result = run_analysis(asin, price_min, price_max, target_price, compulsory_features, same_brand_option, df_current_day, compulsory_keywords, non_compulsory_keywords)
     #st.write("run_analysis result:", result)
 
     # Calculate the number of products with missing or invalid prices
@@ -870,6 +870,7 @@ def calculate_and_plot_cpi(merged_data_df, price_data_df, asin_list, start_date,
     dates_to_process = []
 
     compulsory_keywords = st.session_state.get('compulsory_keywords', [])
+    non_compulsory_keywords = st.session_state.get('non_compulsory_keywords', [])
 
     combined_competitor_df = pd.DataFrame()
 
@@ -890,7 +891,7 @@ def calculate_and_plot_cpi(merged_data_df, price_data_df, asin_list, start_date,
             dates_to_process.append(current_date)
             
             st.write(f"Processing date: {current_date}")
-            result = process_date(merged_data_df, asin, pd.to_datetime(current_date), price_min, price_max, compulsory_features, same_brand_option, compulsory_keywords)
+            result = process_date(merged_data_df, asin, pd.to_datetime(current_date), price_min, price_max, compulsory_features, same_brand_option, compulsory_keywords, non_compulsory_keywords)
 
             if result is not None:
                 daily_results = result['result'][:-1]
@@ -1092,6 +1093,7 @@ def run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_ma
 
     st.session_state['selected_keyword_ids'] = get_selected_keyword_ids()
     compulsory_keywords = st.session_state.get('compulsory_keywords', [])
+    non_compulsory_keywords = st.session_state.get('non_compulsory_keywords', [])
 
     
     merged_data_df['date'] = pd.to_datetime(merged_data_df['date'], errors='coerce')
@@ -1127,11 +1129,11 @@ def run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_ma
 
     # Check if we should perform time-series analysis (only if brand == 'napqueen' and dates are provided)
     if target_brand.upper() == "NAPQUEEN" and start_date and end_date:
-        perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, df_recent, compulsory_keywords)
+        perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, df_recent, compulsory_keywords, non_compulsory_keywords)
         calculate_and_plot_cpi(merged_data_df, price_data_df, [asin], start_date, end_date, price_min, price_max, compulsory_features, same_brand_option)
     else:
         # Perform scatter plot only
-        perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, df_recent, compulsory_keywords)
+        perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, df_recent, compulsory_keywords, non_compulsory_keywords)
 
 
 # Load data globally before starting the Streamlit app
@@ -1251,16 +1253,21 @@ def get_words_in_title(asin=None):
     
     words_in_title = st.text_area("Words must be in Title", value="", height=100, key=f"words_in_title_text_area{key_suffix}")
     # Split the input text by whitespace and return it as a list of words
-    words_list = words_in_title.split()
+    compulsory_keywords = words_in_title.split()
     
     # Store the list in session state to persist it across the session
-    st.session_state['compulsory_keywords'] = words_list
+    st.session_state['compulsory_keywords'] = compulsory_keywords
 
-    return words_list
+    # New box for "Exclude words in title"
+    exclude_words_in_title = st.text_area("Exclude words in Title", value="", height=100, key=f"exclude_words_in_title_text_area{key_suffix}")
+    non_compulsory_keywords = exclude_words_in_title.split()
+    st.session_state['non_compulsory_keywords'] = non_compulsory_keywords  # Store in session state for persistence
+
+    return compulsory_keywords, non_compulsory_keywords
 
 
 # Initialize the compulsory_keywords list that stores words entered by the user
-compulsory_keywords = get_words_in_title(asin)
+#compulsory_keywords = get_words_in_title(asin)
 
 # If the user selects "Include Keywords", allow them to select keywords from multi-select
 if keyword_option == 'Include Keywords':

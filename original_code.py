@@ -529,26 +529,21 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
                 #all_keywords_present = all(keyword.lower() in title.lower() for keyword in compulsory_keywords)
             #else:
                 #all_keywords_present = False  # Return False if the title is NaN or not a string
+            
+            all_keywords_present = False
+            any_excluded_word_present = False  # Invalid title, fail both checks
+            
             if isinstance(title, str):
-                if compulsory_keywords:
                     all_keywords_present = all(keyword.lower() in title.lower() for keyword in compulsory_keywords)
-                #else:
-                    #all_keywords_present = True  # No words entered in "Must Be in Title" box, pass this check
-
-                # Check if any non-compulsory (excluded) keywords are present in the title (Exclude Words in Title)
-                if non_compulsory_keywords:
                     any_excluded_word_present = any(keyword.lower() in title.lower() for keyword in non_compulsory_keywords)
-                #else:
-                    #any_excluded_word_present = False  # No words entered in "Exclude Words in Title" box, pass this check
-            else:
-                all_keywords_present = False
-                any_excluded_word_present = False  # Invalid title, fail both checks
-
+            
+            if any_excluded_word_present or not all_keywords_present:
+                continue 
             # Append product to similarities based on keyword filtering option
             if keyword_option == 'Include Keywords':
                 # Check if the product matches the ASIN list and has all keywords present in the title
                 #all_keywords_present = all(keyword.lower() in compare_title for keyword in compulsory_keywords)
-                if compulsory_match and (row['ASIN'] in similar_asin_list) and all_keywords_present and any_excluded_word_present:
+                if compulsory_match and (row['ASIN'] in similar_asin_list):
                     # Append the product to the similarities list
                     asin = row['ASIN']
                     combination = (compare_title, row['price'], str(compare_details))
@@ -566,7 +561,7 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
                         unique_asins.add(asin)
                         seen_combinations.add(combination)
             elif keyword_option == 'Negate Keywords':
-                if compulsory_match and (row['ASIN'] in similar_asin_list) and all_keywords_present and any_excluded_word_present:
+                if compulsory_match and (row['ASIN'] in similar_asin_list):
                     # Append the product to the similarities list
                     asin = row['ASIN']
                     combination = (compare_title, row['price'], str(compare_details))
@@ -585,7 +580,7 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
                         seen_combinations.add(combination)
             else:
                 # No keywords filtering, just use compulsory_match and add product directly
-                if compulsory_match and all_keywords_present and any_excluded_word_present:
+                if compulsory_match:
                     asin = row['ASIN']
                     combination = (compare_title, row['price'], str(compare_details))
                     if combination not in seen_combinations and asin not in unique_asins:

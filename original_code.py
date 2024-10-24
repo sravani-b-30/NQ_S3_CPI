@@ -671,7 +671,7 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     # Debug: Check the length and contents of similar_products before creating DataFrame
     st.write(f"Number of similar products found: {len(similar_products)}")
     st.write(f"Contents of similar_products: {similar_products}")
-    
+
     # Retrieve target product information
     target_product = merged_data_df[merged_data_df['ASIN'] == asin].iloc[0]
     target_title = str(target_product['product_title']).lower()
@@ -686,7 +686,7 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     
     target_product_entry = (
         asin, target_product['product_title'], target_price, weighted_score, details_score,
-        title_score, desc_score, target_details, details_comparison, title_comparison, desc_comparison
+        title_score, desc_score, target_details, details_comparison, title_comparison, desc_comparison, target_product['brand']
     )
 
     # Ensure the target product is not included in the similar products list

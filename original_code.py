@@ -667,7 +667,11 @@ def show_features(asin):
 def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, merged_data_df, compulsory_keywords, non_compulsory_keywords):
     # Find similar products
     similar_products = find_similar_products(asin, price_min, price_max, merged_data_df, compulsory_features, same_brand_option, compulsory_keywords, non_compulsory_keywords)
-
+    
+    # Debug: Check the length and contents of similar_products before creating DataFrame
+    st.write(f"Number of similar products found: {len(similar_products)}")
+    st.write(f"Contents of similar_products: {similar_products}")
+    
     # Retrieve target product information
     target_product = merged_data_df[merged_data_df['ASIN'] == asin].iloc[0]
     target_title = str(target_product['product_title']).lower()
@@ -694,6 +698,10 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     weighted_scores = [p[3] for p in similar_products]
     product_titles = [p[1] for p in similar_products]
     asin_list = [p[0] for p in similar_products]
+    
+    # Debug: Ensure the tuple format before DataFrame creation
+    st.write(f"Final similar_products list: {similar_products}")
+    st.write(f"Tuple length in similar_products (should be 12): {len(similar_products[0]) if similar_products else 'No products found'}")
 
     #Create DataFrame for competitors in scatter plot
     scatter_competitors_df = pd.DataFrame(similar_products, columns=[

@@ -524,13 +524,25 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
             title = row['product_title']
 
             # Ensure title is a valid string, otherwise return False
-            if isinstance(title, str):
+            #if isinstance(title, str):
                 # Check if all keywords from compulsory_keywords are present in the title
-                all_keywords_present = all(keyword.lower() in title.lower() for keyword in compulsory_keywords)
-                any_excluded_word_present = any(exclude_keyword.lower() in compare_title for exclude_keyword in non_compulsory_keywords)
+                #all_keywords_present = all(keyword.lower() in title.lower() for keyword in compulsory_keywords)
+            #else:
+                #all_keywords_present = False  # Return False if the title is NaN or not a string
+            if isinstance(title, str):
+                if compulsory_keywords:
+                    all_keywords_present = all(keyword.lower() in title.lower() for keyword in compulsory_keywords)
+                #else:
+                    #all_keywords_present = True  # No words entered in "Must Be in Title" box, pass this check
+
+                # Check if any non-compulsory (excluded) keywords are present in the title (Exclude Words in Title)
+                if non_compulsory_keywords:
+                    any_excluded_word_present = any(keyword.lower() in title.lower() for keyword in non_compulsory_keywords)
+                #else:
+                    #any_excluded_word_present = False  # No words entered in "Exclude Words in Title" box, pass this check
             else:
-                all_keywords_present = False  # Return False if the title is NaN or not a string
-                any_excluded_word_present = False
+                all_keywords_present = False
+                any_excluded_word_present = False  # Invalid title, fail both checks
 
             # Append product to similarities based on keyword filtering option
             if keyword_option == 'Include Keywords':
@@ -1253,21 +1265,27 @@ def get_words_in_title(asin=None):
     
     words_in_title = st.text_area("Words must be in Title", value="", height=100, key=f"words_in_title_text_area{key_suffix}")
     # Split the input text by whitespace and return it as a list of words
-    compulsory_keywords = words_in_title.split()
-    
+    words_in_list = words_in_title.split()
     # Store the list in session state to persist it across the session
-    st.session_state['compulsory_keywords'] = compulsory_keywords
+    st.session_state['compulsory_keywords'] = words_in_list
 
+    return words_in_list
+
+# Initialize the compulsory_keywords list that stores words entered by the user
+compulsory_keywords = get_words_in_title(asin)
+
+def get_exclude_words_in_title(asin=None):
+    """Retrieve words from the Text box and return them as a list."""
+    # Use the asin to generate a unique key if necessary
+    key_suffix = f"_{asin}" if asin else ""
     # New box for "Exclude words in title"
     exclude_words_in_title = st.text_area("Exclude words in Title", value="", height=100, key=f"exclude_words_in_title_text_area{key_suffix}")
     non_compulsory_keywords = exclude_words_in_title.split()
     st.session_state['non_compulsory_keywords'] = non_compulsory_keywords  # Store in session state for persistence
 
-    return compulsory_keywords, non_compulsory_keywords
+    return  non_compulsory_keywords
 
-
-# Initialize the compulsory_keywords list that stores words entered by the user
-#compulsory_keywords = get_words_in_title(asin)
+non_compulsory_keywords = get_exclude_words_in_title(asin)
 
 # If the user selects "Include Keywords", allow them to select keywords from multi-select
 if keyword_option == 'Include Keywords':

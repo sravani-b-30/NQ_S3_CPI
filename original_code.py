@@ -551,15 +551,14 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
                         details_score, title_score, desc_score, details_comparison, title_comparison, desc_comparison = calculate_similarity(
                             target_details, compare_details, target_title, compare_title, target_desc, compare_desc
                         )
-                        print(details_score, title_score, desc_score, compare_details, details_comparison, title_comparison, desc_comparison, compare_brand)
                         weighted_score = calculate_weighted_score(details_score, title_score, desc_score)
+                        st.write(f"Tuple length: {len((asin, row['product_title'], row['price'], weighted_score, details_score, title_score, desc_score, compare_details, details_comparison, title_comparison, desc_comparison, compare_brand))}")
                         if weighted_score > 0:
                             similarities.append(
                                 (asin, row['product_title'], row['price'], weighted_score, details_score,
                                  title_score, desc_score, compare_details, details_comparison, title_comparison,
                                  desc_comparison, compare_brand)
                             )
-                            print(len((asin, row['product_title'], row['price'], weighted_score, details_score, title_score, desc_score, compare_details, details_comparison, title_comparison, desc_comparison, compare_brand)))
                         unique_asins.add(asin)
                         seen_combinations.add(combination)
             elif keyword_option == 'Negate Keywords':

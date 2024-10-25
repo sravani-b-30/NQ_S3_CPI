@@ -678,6 +678,11 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     # Check if scatter_competitors_df already exists in session state to avoid recomputation
     if f'scatter_competitors_{asin}' in st.session_state:
         scatter_competitors_df = st.session_state[f'scatter_competitors_{asin}']
+        similar_products = scatter_competitors_df.values.tolist()
+        prices = scatter_competitors_df['Price'].tolist()
+        weighted_scores = scatter_competitors_df['Weighted Score'].tolist() if 'Weighted Score' in scatter_competitors_df else [0] * len(scatter_competitors_df)
+        product_titles = scatter_competitors_df['Title'].tolist()
+        asin_list = scatter_competitors_df['ASIN'].tolist()
     else:
         # Find similar products
          similar_products = find_similar_products(asin, price_min, price_max, merged_data_df, compulsory_features, same_brand_option, compulsory_keywords, non_compulsory_keywords)
@@ -796,13 +801,18 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     st.subheader("Product Comparison Details")
     st.write(f"**Competitor Count**: {competitor_count}")
     st.write(f"**Number of Competitors with Null Price**: {price_null_count}")
+
+    # Save the competitor DataFrame to an in-memory buffer for download
+    csv_buffer = io.BytesIO()
+    scatter_competitors_df.to_csv(csv_buffer, index=False)
+    csv_buffer.seek(0)  # Move the buffer's position to the beginning
     
     # Save the competitor DataFrame as a CSV
     scatter_competitors_filename = f"scatter_competitors_{asin}.csv"
     scatter_competitors_df.to_csv(scatter_competitors_filename, index=False)
     
     st.session_state['scatter_competitor_files'][asin] = scatter_competitors_filename
-    
+
     #st.session_state['scatter_competitor_files'] = scatter_competitors_filename
      # Provide a download button, loading the file from session state
     #if st.session_state['scatter_competitors_df'] is not None:

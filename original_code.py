@@ -799,7 +799,7 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
         csv_data = st.session_state['scatter_competitors_df'].to_csv(index=False).encode('utf-8')
 
     # Download button for competitor products in scatter plot
-    with open(scatter_competitors_filename, 'rb') as file:
+    with open(scatter_competitors_filename, 'rb') as csv_data:
         st.download_button(
             label="Download Competitor Details from Scatter Plot Analysis",
             data=csv_data,

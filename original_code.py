@@ -554,8 +554,8 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
                         weighted_score = calculate_weighted_score(details_score, title_score, desc_score)
                         #st.write(f"Tuple length: {len((asin, row['product_title'], row['price'], weighted_score, details_score, title_score, desc_score, compare_details, details_comparison, title_comparison, desc_comparison, compare_brand))}")
                         if weighted_score > 0:
-                            st.write(f"Tuple data: {(asin, row['product_title'], row['price'], weighted_score, details_score, title_score, desc_score, compare_details, details_comparison, title_comparison, desc_comparison, compare_brand)}")
-                            st.write(f"Tuple length: {len((asin, row['product_title'], row['price'], weighted_score, details_score, title_score, desc_score, compare_details, details_comparison, title_comparison, desc_comparison, compare_brand))}")
+                            #st.write(f"Tuple data: {(asin, row['product_title'], row['price'], weighted_score, details_score, title_score, desc_score, compare_details, details_comparison, title_comparison, desc_comparison, compare_brand)}")
+                            #st.write(f"Tuple length: {len((asin, row['product_title'], row['price'], weighted_score, details_score, title_score, desc_score, compare_details, details_comparison, title_comparison, desc_comparison, compare_brand))}")
 
                             similarities.append(
                                 (asin, row['product_title'], row['price'], weighted_score, details_score,
@@ -669,8 +669,8 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     similar_products = find_similar_products(asin, price_min, price_max, merged_data_df, compulsory_features, same_brand_option, compulsory_keywords, non_compulsory_keywords)
     
     # Debug: Check the length and contents of similar_products before creating DataFrame
-    st.write(f"Number of similar products found: {len(similar_products)}")
-    st.write(f"Contents of similar_products: {similar_products}")
+    #st.write(f"Number of similar products found: {len(similar_products)}")
+    #st.write(f"Contents of similar_products: {similar_products}")
 
     # Retrieve target product information
     target_product = merged_data_df[merged_data_df['ASIN'] == asin].iloc[0]
@@ -700,8 +700,8 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     asin_list = [p[0] for p in similar_products]
     
     # Debug: Ensure the tuple format before DataFrame creation
-    st.write(f"Final similar_products list: {similar_products}")
-    st.write(f"Tuple length in similar_products (should be 12): {len(similar_products[0]) if similar_products else 'No products found'}")
+    #st.write(f"Final similar_products list: {similar_products}")
+    #st.write(f"Tuple length in similar_products (should be 12): {len(similar_products[0]) if similar_products else 'No products found'}")
 
     #Create DataFrame for competitors in scatter plot
     scatter_competitors_df = pd.DataFrame(similar_products, columns=[

@@ -664,11 +664,6 @@ def show_features(asin):
 
     return product_details
 
-if 'scatter_competitor_files' not in st.session_state:
-    st.session_state['scatter_competitor_files'] = {}
-if 'recompute' not in st.session_state:
-    st.session_state['recompute'] = False
-
 def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, merged_data_df, compulsory_keywords, non_compulsory_keywords):
     
 # Find similar products

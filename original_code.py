@@ -702,6 +702,10 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     # Debug: Ensure the tuple format before DataFrame creation
     #st.write(f"Final similar_products list: {similar_products}")
     #st.write(f"Tuple length in similar_products (should be 12): {len(similar_products[0]) if similar_products else 'No products found'}")
+    
+    # Store analysis results in session state to persist across interactions
+    if 'scatter_competitors_df' not in st.session_state:
+        st.session_state['scatter_competitors_df'] = None
 
     #Create DataFrame for competitors in scatter plot
     scatter_competitors_df = pd.DataFrame(similar_products, columns=[
@@ -722,6 +726,9 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     # Filter the dataframe to include only the required columns
     scatter_competitors_df = scatter_competitors_df[['ASIN', 'Title', 'Price', 'Product Dimension', 'Brand', 'Matching Features']]
     
+    # Save the DataFrame in session state to avoid reloading issues on download
+    st.session_state['scatter_competitors_df'] = scatter_competitors_df
+
     # Plot using Plotly
     fig = go.Figure()
 
@@ -782,14 +789,20 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     st.write(f"**Number of Competitors with Null Price**: {price_null_count}")
     
     # Save the competitor DataFrame as a CSV
-    scatter_competitors_filename = f"scatter_competitors_{asin}.csv"
-    scatter_competitors_df.to_csv(scatter_competitors_filename, index=False)
+    #scatter_competitors_filename = f"scatter_competitors_{asin}.csv"
+    #scatter_competitors_df.to_csv(scatter_competitors_filename, index=False)
+     # Provide a download button, loading the file from session state
+    if st.session_state['scatter_competitors_df'] is not None:
+        scatter_competitors_filename = f"scatter_competitors_{asin}.csv"
+        
+        # Convert the DataFrame to CSV
+        csv_data = st.session_state['scatter_competitors_df'].to_csv(index=False).encode('utf-8')
 
     # Download button for competitor products in scatter plot
     with open(scatter_competitors_filename, 'rb') as file:
         st.download_button(
             label="Download Competitor Details from Scatter Plot Analysis",
-            data=file,
+            data=csv_data,
             file_name=scatter_competitors_filename,
             mime='text/csv'
         )

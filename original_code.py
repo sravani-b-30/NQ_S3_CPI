@@ -1295,6 +1295,7 @@ def get_words_in_title(asin=None):
 
     return words_in_list
 
+compulsory_keywords = []
 # Initialize the compulsory_keywords list that stores words entered by the user
 compulsory_keywords = get_words_in_title(asin)
 
@@ -1308,6 +1309,8 @@ def get_exclude_words_in_title(asin=None):
     st.session_state['non_compulsory_keywords'] = non_compulsory_keywords  # Store in session state for persistence
 
     return  non_compulsory_keywords
+
+non_compulsory_keywords = []
 
 non_compulsory_keywords = get_exclude_words_in_title(asin)
 

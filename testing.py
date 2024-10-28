@@ -664,10 +664,17 @@ def show_features(asin):
 
     return product_details
 
+if 'scatter_competitor_files' not in st.session_state:
+        st.session_state['scatter_competitor_files'] = {}
+if 'recompute' not in st.session_state:
+        st.session_state['recompute'] = False
+
 def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, merged_data_df, compulsory_keywords, non_compulsory_keywords):
     
-    if 'scatter_competitor_files' not in st.session_state:
+    if st.session_state.get('recompute', False) or st.button('Run Analysis Again'):
         st.session_state['scatter_competitor_files'] = {}
+        st.session_state['recompute'] = False
+
     # Find similar products
     similar_products = find_similar_products(asin, price_min, price_max, merged_data_df, compulsory_features, same_brand_option, compulsory_keywords, non_compulsory_keywords)
 
@@ -793,7 +800,7 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     #scatter_competitors_df.to_csv(csv_buffer, index=False)
     #csv_data = csv_buffer.getvalue()
     
-    st.session_state['scatter_competitor_files'] = scatter_competitors_filename
+    st.session_state['scatter_competitor_files'] = scatter_competitors_df
     # Download button for competitor products in scatter plot
     #with open(scatter_competitors_filename, 'rb') as csv_data:
     st.download_button(
@@ -802,6 +809,8 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
             file_name=scatter_competitors_filename,
             mime='text/csv'
         )
+    
+    st.session_state['scatter_competitor_files'] = scatter_competitors_df
 
     # CPI Score Polar Plot
     competitor_prices = np.array(prices)
@@ -1132,7 +1141,6 @@ def run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_ma
     st.session_state['selected_keyword_ids'] = get_selected_keyword_ids()
     compulsory_keywords = st.session_state.get('compulsory_keywords', [])
     non_compulsory_keywords = st.session_state.get('non_compulsory_keywords', [])
-
     
     merged_data_df['date'] = pd.to_datetime(merged_data_df['date'], errors='coerce')
     df_recent = merged_data_df[merged_data_df['date'] == merged_data_df['date'].max()]

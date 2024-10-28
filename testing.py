@@ -666,7 +666,8 @@ def show_features(asin):
 
 def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, merged_data_df, compulsory_keywords, non_compulsory_keywords):
     
-    if "similar_products" in st.session_state and not st.session_state.get("recompute", False):
+    if "similar_products" in st.session_state and "scatter_competitors_df" in st.session_state:
+        # Retrieve from session state if already computed
         similar_products = st.session_state["similar_products"]
         scatter_competitors_df = st.session_state["scatter_competitors_df"]
     else:
@@ -727,10 +728,9 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
         # Filter the dataframe to include only the required columns
         scatter_competitors_df = scatter_competitors_df[['ASIN', 'Title', 'Price', 'Product Dimension', 'Brand', 'Matching Features']]
 
-        # Store results in session state
+        # Store in session state to prevent recomputation
         st.session_state["similar_products"] = similar_products
         st.session_state["scatter_competitors_df"] = scatter_competitors_df
-        st.session_state["recompute"] = False  # Reset flag after computation
 
     # Plot using Plotly
     fig = go.Figure()
@@ -791,19 +791,18 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     st.write(f"**Competitor Count**: {competitor_count}")
     st.write(f"**Number of Competitors with Null Price**: {price_null_count}")
 
-    # Save the competitor DataFrame as a CSV
-    scatter_competitors_filename = f"scatter_competitors_{asin}.csv"
-    #scatter_df = scatter_competitors_df.to_csv(scatter_competitors_filename, index=False)
-    csv_buffer = io.StringIO()
-    scatter_competitors_df.to_csv(csv_buffer, index=False)
-    csv_data = csv_buffer.getvalue()
+    def prepare_download_button(asin):
+    # Function to prepare download button data without resetting analysis
+        csv_buffer = io.StringIO()
+        scatter_competitors_df = st.session_state["scatter_competitors_df"]
+        scatter_competitors_df.to_csv(csv_buffer, index=False)
+        csv_data = csv_buffer.getvalue()
 
-    # Download button for competitor products in scatter plot
-    #with open(scatter_competitors_filename, 'rb') as csv_data:
-    st.download_button(
+        # Download button, ensuring analysis doesn't reset
+        st.download_button(
             label="Download Competitor Details from Scatter Plot Analysis",
             data=csv_data,
-            file_name=scatter_competitors_filename,
+            file_name=f"scatter_competitors_{asin}.csv",
             mime='text/csv'
         )
 
@@ -851,6 +850,8 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
 
     # Display CPI score plots
     st.pyplot(fig_cpi)
+
+    prepare_download_button(asin)
 
 # Initialize session state variables with additional checks
 if 'result_df' not in st.session_state or st.session_state.get('recompute', False):
@@ -1176,10 +1177,8 @@ def run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_ma
     else:
         # Perform scatter plot only
         perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, df_recent, compulsory_keywords, non_compulsory_keywords)
+        
     
-    # Reset recompute flag after analysis
-    st.session_state['recompute'] = False
-
 
 # Load data globally before starting the Streamlit app
 df = load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix)
@@ -1388,17 +1387,6 @@ else:
 def get_selected_keyword_ids():
     # Simply return the keyword IDs stored in session state
     return st.session_state.get('selected_keyword_ids', [])
-
-# Detect any input changes to set recompute flag
-if (
-    st.session_state.get("asin") != asin or
-    st.session_state.get("price_min") != price_min or
-    st.session_state.get("price_max") != price_max or
-    st.session_state.get("start_date") != start_date or
-    st.session_state.get("end_date") != end_date or
-    st.session_state.get("compulsory_features") != compulsory_features
-):
-    st.session_state['recompute'] = True  # Flag for recompute if any input changes
 
 # Store input values in session state for use in re-runs
 if 'asin_list' not in st.session_state:

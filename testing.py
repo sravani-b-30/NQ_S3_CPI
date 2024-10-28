@@ -664,16 +664,9 @@ def show_features(asin):
 
     return product_details
 
-if 'scatter_competitor_files' not in st.session_state:
-        st.session_state['scatter_competitor_files'] = {}
-if 'recompute' not in st.session_state:
-        st.session_state['recompute'] = False
 
 def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, merged_data_df, compulsory_keywords, non_compulsory_keywords):
     
-    if st.session_state.get('recompute', False) or st.button('Run Analysis Again'):
-        st.session_state['scatter_competitor_files'] = {}
-        st.session_state['recompute'] = False
 
     # Find similar products
     similar_products = find_similar_products(asin, price_min, price_max, merged_data_df, compulsory_features, same_brand_option, compulsory_keywords, non_compulsory_keywords)
@@ -732,8 +725,6 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     # Filter the dataframe to include only the required columns
     scatter_competitors_df = scatter_competitors_df[['ASIN', 'Title', 'Price', 'Product Dimension', 'Brand', 'Matching Features']]
     
-    st.session_state['scatter_competitor_files'] = scatter_competitors_df
-
     # Plot using Plotly
     fig = go.Figure()
 
@@ -792,6 +783,22 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     st.subheader("Product Comparison Details")
     st.write(f"**Competitor Count**: {competitor_count}")
     st.write(f"**Number of Competitors with Null Price**: {price_null_count}")
+    
+    # Store analysis results in session state
+    if 'analysis_results' not in st.session_state:
+        st.session_state['analysis_results'] = None  # Initialize empty
+
+    if st.button("Analyze"):
+        # Perform the analysis only if the button is clicked
+        result = run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_max, 
+                                    target_price, start_date, end_date, same_brand_option, compulsory_features)
+        
+        # Save the results in session state to persist them
+        st.session_state['analysis_results'] = result
+
+    # Display the analysis results if they exist in session state
+    if st.session_state['analysis_results']:
+        asin, target_price, cpi_score, num_competitors, size, product_dimension, prices, competitors_df, dynamic_cpi_score = st.session_state['analysis_results']
 
     # Save the competitor DataFrame as a CSV
     scatter_competitors_filename = f"scatter_competitors_{asin}.csv"
@@ -800,11 +807,6 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     #scatter_competitors_df.to_csv(csv_buffer, index=False)
     #csv_data = csv_buffer.getvalue()
     
-    st.session_state['scatter_competitor_files'] = scatter_competitors_df
-    
-    if 'download_button' not in st.session_state :
-        st.session_state['download_button'] = False
-
     # Download button for competitor products in scatter plot
     #with open(scatter_competitors_filename, 'rb') as csv_data:
     st.download_button(
@@ -814,8 +816,6 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
             mime='text/csv'
         )
     
-    st.session_state['download_button'] = st.session_state['scatter_competitor_files']
-
     # CPI Score Polar Plot
     competitor_prices = np.array(prices)
     cpi_score = calculate_cpi_score(target_price, competitor_prices)

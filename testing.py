@@ -416,6 +416,11 @@ def safe_literal_eval(val):
             return val  # Return original if evaluation fails
     return val
 
+
+# Store analysis results in session state
+    if 'analysis_results' not in st.session_state:
+        st.session_state['analysis_results'] = None  # Initialize empty
+
 def find_similar_asins(input_asin, asin_keyword_df):
 
     # Convert keyword_id_list column from string representation to actual lists
@@ -783,18 +788,6 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     st.subheader("Product Comparison Details")
     st.write(f"**Competitor Count**: {competitor_count}")
     st.write(f"**Number of Competitors with Null Price**: {price_null_count}")
-    
-    # Store analysis results in session state
-    if 'analysis_results' not in st.session_state:
-        st.session_state['analysis_results'] = None  # Initialize empty
-
-    if st.button("Analyze"):
-        # Perform the analysis only if the button is clicked
-        result = run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_max, 
-                                    target_price, start_date, end_date, same_brand_option, compulsory_features)
-        
-        # Save the results in session state to persist them
-        st.session_state['analysis_results'] = result
 
     # Display the analysis results if they exist in session state
     if st.session_state['analysis_results']:
@@ -1139,7 +1132,6 @@ def run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_ma
     # Set recompute flag
     st.session_state['recompute'] = True
     
-
     st.write("Inside Analysis")
 
     st.session_state['selected_keyword_ids'] = get_selected_keyword_ids()
@@ -1411,4 +1403,9 @@ if 'same_brand_option' not in st.session_state:
     st.session_state['same_brand_option'] = same_brand_option
 
 if st.button("Analyze"):
-    run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_max, target_price, start_date, end_date, same_brand_option, compulsory_features)
+        # Perform the analysis only if the button is clicked
+        result = run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_max, 
+                                    target_price, start_date, end_date, same_brand_option, compulsory_features)
+        
+        # Save the results in session state to persist them
+        st.session_state['analysis_results'] = result

@@ -1289,7 +1289,7 @@ def get_words_in_title(asin=None):
     
     words_in_title = st.text_area("Words must be in Title", value="", height=100, key=f"words_in_title_text_area{key_suffix}")
     # Split the input text by whitespace and return it as a list of words
-    words_in_list = words_in_title.split()
+    words_in_list = [word.strip() for word in re.split(r'[,;\s]+', words_in_title) if word.strip()]
     # Store the list in session state to persist it across the session
     st.session_state['compulsory_keywords'] = words_in_list
 
@@ -1305,7 +1305,7 @@ def get_exclude_words_in_title(asin=None):
     key_suffix = f"_{asin}" if asin else ""
     # New box for "Exclude words in title"
     exclude_words_in_title = st.text_area("Exclude words in Title", value="", height=100, key=f"exclude_words_in_title_text_area{key_suffix}")
-    non_compulsory_keywords = exclude_words_in_title.split()
+    non_compulsory_keywords = [word.strip() for word in re.split(r'[,;\s]+', exclude_words_in_title) if word.strip()]
     st.session_state['non_compulsory_keywords'] = non_compulsory_keywords  # Store in session state for persistence
 
     return  non_compulsory_keywords

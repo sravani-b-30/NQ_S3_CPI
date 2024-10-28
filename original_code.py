@@ -967,11 +967,12 @@ def calculate_and_plot_cpi(merged_data_df, price_data_df, asin_list, start_date,
     # Investigate mixed data types and force consistent types if necessary
     napqueen_df['ad_spend'] = pd.to_numeric(napqueen_df['ad_spend'], errors='coerce')
     napqueen_df['orderedunits'] = pd.to_numeric(napqueen_df['orderedunits'], errors='coerce')
+    napqueen_df['orderedrevenueamount'] = pd.to_numeric(napqueen_df['orderedrevenueamount'], errors='coerce')
 
 
     try:
         #result_df['Date'] = pd.to_datetime(result_df['Date'], format='%d-%m-%Y')
-        result_df = pd.merge(result_df, napqueen_df[['Date', 'ASIN', 'ad_spend', 'orderedunits']], on=['Date', 'ASIN'], how='left')
+        result_df = pd.merge(result_df, napqueen_df[['Date', 'ASIN', 'ad_spend', 'orderedunits', 'orderedrevenueamount']], on=['Date', 'ASIN'], how='left')
 
         st.success("Merging successful! Displaying the merged dataframe:")
         st.dataframe(result_df)
@@ -983,7 +984,7 @@ def calculate_and_plot_cpi(merged_data_df, price_data_df, asin_list, start_date,
 
     # Plot the results
     st.subheader("Time-Series Analysis Results")
-    plot_results(result_df, asin_list, start_date, end_date)
+    plot_results(result_df, asin_list, start_date, end_date, selected_ax4_column)
 
     if not combined_competitor_df.empty:
         st.subheader("Combined Competitor Data for Selected Date Range")
@@ -1023,7 +1024,7 @@ def plot_competitor_vs_null_analysis(competitor_count_per_day, null_price_count_
     st.pyplot(fig)
 
 
-def plot_results(result_df, asin_list, start_date, end_date):
+def plot_results(result_df, asin_list, start_date, end_date, selected_ax4_column):
 
     for asin in asin_list:
         asin_results = result_df[result_df['ASIN'] == asin]
@@ -1056,12 +1057,20 @@ def plot_results(result_df, asin_list, start_date, end_date):
         # Plot Ordered Units on ax4
         ax4 = ax1.twinx()
         ax4.spines['right'].set_position(('outward', 120))  # Offset further to the right
-        ax4.set_ylabel('Ordered Units', color='tab:purple')
-        ax4.plot(pd.to_datetime(asin_results['Date']), asin_results['orderedunits'], label='Ordered Units', color='tab:purple')
+        ax4.set_ylabel('Ordered Units' if selected_ax4_column == 'orderedunits' else 'Ordered Revenue Amount', color='tab:purple')
+        ax4.plot(
+            pd.to_datetime(asin_results['Date']),
+            asin_results[selected_ax4_column],  # Select column based on user choice
+            label='Ordered Units' if selected_ax4_column == 'orderedunits' else 'Ordered Revenue Amount',
+            color='tab:purple'
+        )
         ax4.tick_params(axis='y', labelcolor='tab:purple')
+        #ax4.set_ylabel('Ordered Units', color='tab:purple')
+        #ax4.plot(pd.to_datetime(asin_results['Date']), asin_results['orderedunits'], label='Ordered Units', color='tab:purple')
+        #ax4.tick_params(axis='y', labelcolor='tab:purple')
 
         # Add title and ensure everything fits
-        plt.title(f'CPI Score, Price, Ad Spend, and Ordered Units Over Time for ASIN {asin}')
+        plt.title(f'CPI Score, Price, Ad Spend, and {selected_ax4_column} Over Time for ASIN {asin}')
         fig.tight_layout()
 
         # Display the plot
@@ -1224,6 +1233,12 @@ if include_dates:
 else:
     start_date, end_date = None, None
 
+# Dropdown selection for ax4 column
+selected_ax4_column = st.selectbox(
+    "Select data for Ordered Units/Revenue Amount",
+    options=["orderedunits", "orderedrevenueamount"],
+    index=0  # Set "orderedunits" as default
+)
 
 # Add the session state clearing logic at the beginning of the app
 clear_session_state_on_date_change()

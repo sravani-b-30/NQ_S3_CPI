@@ -801,6 +801,10 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     #csv_data = csv_buffer.getvalue()
     
     st.session_state['scatter_competitor_files'] = scatter_competitors_df
+    
+    if 'download_button' not in st.session_state :
+        st.session_state['download_button'] = False
+
     # Download button for competitor products in scatter plot
     #with open(scatter_competitors_filename, 'rb') as csv_data:
     st.download_button(
@@ -810,7 +814,7 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
             mime='text/csv'
         )
     
-    st.session_state['scatter_competitor_files'] = scatter_competitors_df
+    st.session_state['download_button'] = st.session_state['scatter_competitor_files']
 
     # CPI Score Polar Plot
     competitor_prices = np.array(prices)

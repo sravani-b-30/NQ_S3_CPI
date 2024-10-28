@@ -666,11 +666,8 @@ def show_features(asin):
 
 def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, merged_data_df, compulsory_keywords, non_compulsory_keywords):
     
-    if "similar_products" in st.session_state and "scatter_competitors_df" in st.session_state:
-        # Retrieve from session state if already computed
-        similar_products = st.session_state["similar_products"]
-        scatter_competitors_df = st.session_state["scatter_competitors_df"]
-    else:
+    # Check if results are already computed and available in session state
+    if "similar_products" not in st.session_state or "scatter_competitors_df" not in st.session_state:
         # Find similar products
         similar_products = find_similar_products(asin, price_min, price_max, merged_data_df, compulsory_features, same_brand_option, compulsory_keywords, non_compulsory_keywords)
 
@@ -727,10 +724,14 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
 
         # Filter the dataframe to include only the required columns
         scatter_competitors_df = scatter_competitors_df[['ASIN', 'Title', 'Price', 'Product Dimension', 'Brand', 'Matching Features']]
-
-        # Store in session state to prevent recomputation
+        
+        # Save computed data in session state
         st.session_state["similar_products"] = similar_products
         st.session_state["scatter_competitors_df"] = scatter_competitors_df
+
+    # Retrieve stored data from session state for display
+    similar_products = st.session_state["similar_products"]
+    scatter_competitors_df = st.session_state["scatter_competitors_df"]
 
     # Plot using Plotly
     fig = go.Figure()
@@ -791,18 +792,19 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     st.write(f"**Competitor Count**: {competitor_count}")
     st.write(f"**Number of Competitors with Null Price**: {price_null_count}")
 
-    def prepare_download_button(asin):
-    # Function to prepare download button data without resetting analysis
-        csv_buffer = io.StringIO()
-        scatter_competitors_df = st.session_state["scatter_competitors_df"]
-        scatter_competitors_df.to_csv(csv_buffer, index=False)
-        csv_data = csv_buffer.getvalue()
+    # Save the competitor DataFrame as a CSV
+    scatter_competitors_filename = f"scatter_competitors_{asin}.csv"
+    #scatter_df = scatter_competitors_df.to_csv(scatter_competitors_filename, index=False)
+    csv_buffer = io.StringIO()
+    scatter_competitors_df.to_csv(csv_buffer, index=False)
+    csv_data = csv_buffer.getvalue()
 
-        # Download button, ensuring analysis doesn't reset
-        st.download_button(
+    # Download button for competitor products in scatter plot
+    #with open(scatter_competitors_filename, 'rb') as csv_data:
+    st.download_button(
             label="Download Competitor Details from Scatter Plot Analysis",
             data=csv_data,
-            file_name=f"scatter_competitors_{asin}.csv",
+            file_name=scatter_competitors_filename,
             mime='text/csv'
         )
 
@@ -850,8 +852,6 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
 
     # Display CPI score plots
     st.pyplot(fig_cpi)
-
-    prepare_download_button(asin)
 
 # Initialize session state variables with additional checks
 if 'result_df' not in st.session_state or st.session_state.get('recompute', False):
@@ -1177,8 +1177,7 @@ def run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_ma
     else:
         # Perform scatter plot only
         perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, df_recent, compulsory_keywords, non_compulsory_keywords)
-        
-    
+
 
 # Load data globally before starting the Streamlit app
 df = load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix)

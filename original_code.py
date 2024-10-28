@@ -666,65 +666,62 @@ def show_features(asin):
 
 def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, merged_data_df, compulsory_keywords, non_compulsory_keywords):
     
-    if 'scatter_competitors_df' not in st.session_state:
-        # Find similar products
-        similar_products = find_similar_products(asin, price_min, price_max, merged_data_df, compulsory_features, same_brand_option, compulsory_keywords, non_compulsory_keywords)
+# Find similar products
+    similar_products = find_similar_products(asin, price_min, price_max, merged_data_df, compulsory_features, same_brand_option, compulsory_keywords, non_compulsory_keywords)
     
-        # Retrieve target product information
-        target_product = merged_data_df[merged_data_df['ASIN'] == asin].iloc[0]
-        target_title = str(target_product['product_title']).lower()
-        target_desc = str(target_product['Description']).lower()
-        target_details = target_product['Product Details']
+    # Debug: Check the length and contents of similar_products before creating DataFrame
+    #st.write(f"Number of similar products found: {len(similar_products)}")
+    #st.write(f"Contents of similar_products: {similar_products}")
 
-        # Calculate similarity scores for the target product
-        details_score, title_score, desc_score, details_comparison, title_comparison, desc_comparison = calculate_similarity(
-        target_details, target_details, target_title, target_title, target_desc, target_desc
-        )
-        weighted_score = calculate_weighted_score(details_score, title_score, desc_score)
-        
-        target_product_entry = (
-        asin, target_product['product_title'], target_price, weighted_score, details_score,
-        title_score, desc_score, target_details, details_comparison, title_comparison, desc_comparison, target_product['brand']
-        )
+    # Retrieve target product information
+    target_product = merged_data_df[merged_data_df['ASIN'] == asin].iloc[0]
+    target_title = str(target_product['product_title']).lower()
+    target_desc = str(target_product['Description']).lower()
+    target_details = target_product['Product Details']
 
-        # Ensure the target product is not included in the similar products list
-        similar_products = [prod for prod in similar_products if prod[0] != asin]
-        similar_products.insert(0, target_product_entry)
+    # Calculate similarity scores for the target product
+    details_score, title_score, desc_score, details_comparison, title_comparison, desc_comparison = calculate_similarity(
+    target_details, target_details, target_title, target_title, target_desc, target_desc
+    )
+    weighted_score = calculate_weighted_score(details_score, title_score, desc_score)
+    
+    target_product_entry = (
+    asin, target_product['product_title'], target_price, weighted_score, details_score,
+    title_score, desc_score, target_details, details_comparison, title_comparison, desc_comparison, target_product['brand']
+    )
 
-        # Extract price and weighted scores from similar products
-        prices = [p[2] for p in similar_products]
-        weighted_scores = [p[3] for p in similar_products]
-        product_titles = [p[1] for p in similar_products]
-        asin_list = [p[0] for p in similar_products]
-        
-        # Debug: Ensure the tuple format before DataFrame creation
-        #st.write(f"Final similar_products list: {similar_products}")
-        #st.write(f"Tuple length in similar_products (should be 12): {len(similar_products[0]) if similar_products else 'No products found'}")
-        
-        #Create DataFrame for competitors in scatter plot
-        scatter_competitors_df = pd.DataFrame(similar_products, columns=[
-            'ASIN', 'Title', 'Price', 'Weighted Score', 'Details Score', 
-            'Title Score', 'Description Score', 'Product Details', 
-            'Details Comparison', 'Title Comparison', 'Description Comparison', 'Brand'
-        ])
-        
-        # Extract Product Dimension and Matching Features
-        scatter_competitors_df['Product Dimension'] = scatter_competitors_df['Product Details'].apply(
-            lambda details: details.get('Product Dimensions', 'N/A'))
-        
-        # Add matching compulsory features
-        scatter_competitors_df['Matching Features'] = scatter_competitors_df['Product Details'].apply(
-            lambda details: {feature: details.get(feature, 'N/A') for feature in compulsory_features}
-        )
+    # Ensure the target product is not included in the similar products list
+    similar_products = [prod for prod in similar_products if prod[0] != asin]
+    similar_products.insert(0, target_product_entry)
 
-        # Filter the dataframe to include only the required columns
-        scatter_competitors_df = scatter_competitors_df[['ASIN', 'Title', 'Price', 'Product Dimension', 'Brand', 'Matching Features']]
+    # Extract price and weighted scores from similar products
+    prices = [p[2] for p in similar_products]
+    weighted_scores = [p[3] for p in similar_products]
+    product_titles = [p[1] for p in similar_products]
+    asin_list = [p[0] for p in similar_products]
+    
+    # Debug: Ensure the tuple format before DataFrame creation
+    #st.write(f"Final similar_products list: {similar_products}")
+    #st.write(f"Tuple length in similar_products (should be 12): {len(similar_products[0]) if similar_products else 'No products found'}")
+    
+    #Create DataFrame for competitors in scatter plot
+    scatter_competitors_df = pd.DataFrame(similar_products, columns=[
+        'ASIN', 'Title', 'Price', 'Weighted Score', 'Details Score', 
+        'Title Score', 'Description Score', 'Product Details', 
+        'Details Comparison', 'Title Comparison', 'Description Comparison', 'Brand'
+    ])
+    
+    # Extract Product Dimension and Matching Features
+    scatter_competitors_df['Product Dimension'] = scatter_competitors_df['Product Details'].apply(
+        lambda details: details.get('Product Dimensions', 'N/A'))
+    
+    # Add matching compulsory features
+    scatter_competitors_df['Matching Features'] = scatter_competitors_df['Product Details'].apply(
+        lambda details: {feature: details.get(feature, 'N/A') for feature in compulsory_features}
+    )
 
-        # Store the DataFrame in session_state
-        st.session_state['scatter_competitors_df'] = scatter_competitors_df
-    else:
-        # Use the cached data if available
-        scatter_competitors_df = st.session_state['scatter_competitors_df']
+    # Filter the dataframe to include only the required columns
+    scatter_competitors_df = scatter_competitors_df[['ASIN', 'Title', 'Price', 'Product Dimension', 'Brand', 'Matching Features']]
 
     # Plot using Plotly
     fig = go.Figure()
@@ -787,17 +784,13 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
 
     # Save the competitor DataFrame as a CSV
     scatter_competitors_filename = f"scatter_competitors_{asin}.csv"
-    #scatter_competitors_df.to_csv(scatter_competitors_filename, index=False)
-    # Prepare CSV data for download
-    csv_buffer = io.BytesIO()
-    scatter_competitors_df.to_csv(csv_buffer, index=False)
-    csv_buffer.seek(0)
+    scatter_competitors_df.to_csv(scatter_competitors_filename, index=False)
 
     # Download button for competitor products in scatter plot
     #with open(scatter_competitors_filename, 'rb') as csv_data:
     st.download_button(
             label="Download Competitor Details from Scatter Plot Analysis",
-            data=csv_buffer,
+            data=scatter_competitors_filename,
             file_name=scatter_competitors_filename,
             mime='text/csv'
         )

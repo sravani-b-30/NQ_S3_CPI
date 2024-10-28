@@ -725,13 +725,21 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
         # Filter the dataframe to include only the required columns
         scatter_competitors_df = scatter_competitors_df[['ASIN', 'Title', 'Price', 'Product Dimension', 'Brand', 'Matching Features']]
         
-        # Save computed data in session state
+        # Cache the analysis results in session state
         st.session_state["similar_products"] = similar_products
         st.session_state["scatter_competitors_df"] = scatter_competitors_df
+        st.session_state["prices"] = [p[2] for p in similar_products]
+        st.session_state["weighted_scores"] = [p[3] for p in similar_products]
+        st.session_state["product_titles"] = [p[1] for p in similar_products]
+        st.session_state["asin_list"] = [p[0] for p in similar_products]
 
-    # Retrieve stored data from session state for display
+    # Retrieve cached data from session state for rendering
     similar_products = st.session_state["similar_products"]
     scatter_competitors_df = st.session_state["scatter_competitors_df"]
+    prices = st.session_state["prices"]
+    weighted_scores = st.session_state["weighted_scores"]
+    product_titles = st.session_state["product_titles"]
+    asin_list = st.session_state["asin_list"]
 
     # Plot using Plotly
     fig = go.Figure()
@@ -1130,7 +1138,10 @@ def plot_distribution_graph(result_df, asin, selected_date):
 def run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_max, target_price, start_date, end_date, same_brand_option, compulsory_features):
     # Set recompute flag
     st.session_state['recompute'] = True
-    
+    # Clear cached results when the "Analyze" button is clicked
+    st.session_state.pop("similar_products", None)
+    st.session_state.pop("scatter_competitors_df", None)
+
 
     st.write("Inside Analysis")
 

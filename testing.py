@@ -664,101 +664,68 @@ def show_features(asin):
 
     return product_details
 
-# Separate function to handle CSV download only
-def download_competitor_csv():
-    if "scatter_competitors_df" in st.session_state:
-        csv_buffer = io.StringIO()
-        st.session_state["scatter_competitors_df"].to_csv(csv_buffer, index=False)
-        csv_data = csv_buffer.getvalue()
-        
-        # Render the download button
-        st.download_button(
-            label="Download Competitor Details from Scatter Plot Analysis",
-            data=csv_data,
-            file_name=f"scatter_competitors_{st.session_state['asin']}.csv",
-            mime='text/csv'
-        )
-    else:
-        st.warning("No data available to download. Please run the analysis first.")
-
 def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, merged_data_df, compulsory_keywords, non_compulsory_keywords):
     
-    # Check if results are already computed and available in session state
-    if "similar_products" not in st.session_state or "scatter_competitors_df" not in st.session_state:
-        # Find similar products
-        similar_products = find_similar_products(asin, price_min, price_max, merged_data_df, compulsory_features, same_brand_option, compulsory_keywords, non_compulsory_keywords)
+    if 'scatter_competitor_files' not in st.session_state:
+        st.session_state['scatter_competitor_files'] = {}
+    # Find similar products
+    similar_products = find_similar_products(asin, price_min, price_max, merged_data_df, compulsory_features, same_brand_option, compulsory_keywords, non_compulsory_keywords)
 
-        # Debug: Check the length and contents of similar_products before creating DataFrame
-        #st.write(f"Number of similar products found: {len(similar_products)}")
-        #st.write(f"Contents of similar_products: {similar_products}")
+    # Debug: Check the length and contents of similar_products before creating DataFrame
+    #st.write(f"Number of similar products found: {len(similar_products)}")
+    #st.write(f"Contents of similar_products: {similar_products}")
 
-        # Retrieve target product information
-        target_product = merged_data_df[merged_data_df['ASIN'] == asin].iloc[0]
-        target_title = str(target_product['product_title']).lower()
-        target_desc = str(target_product['Description']).lower()
-        target_details = target_product['Product Details']
+    # Retrieve target product information
+    target_product = merged_data_df[merged_data_df['ASIN'] == asin].iloc[0]
+    target_title = str(target_product['product_title']).lower()
+    target_desc = str(target_product['Description']).lower()
+    target_details = target_product['Product Details']
 
-        # Calculate similarity scores for the target product
-        details_score, title_score, desc_score, details_comparison, title_comparison, desc_comparison = calculate_similarity(
-        target_details, target_details, target_title, target_title, target_desc, target_desc
-        )
-        weighted_score = calculate_weighted_score(details_score, title_score, desc_score)
+    # Calculate similarity scores for the target product
+    details_score, title_score, desc_score, details_comparison, title_comparison, desc_comparison = calculate_similarity(
+    target_details, target_details, target_title, target_title, target_desc, target_desc
+    )
+    weighted_score = calculate_weighted_score(details_score, title_score, desc_score)
 
-        target_product_entry = (
-        asin, target_product['product_title'], target_price, weighted_score, details_score,
-        title_score, desc_score, target_details, details_comparison, title_comparison, desc_comparison, target_product['brand']
-        )
+    target_product_entry = (
+    asin, target_product['product_title'], target_price, weighted_score, details_score,
+    title_score, desc_score, target_details, details_comparison, title_comparison, desc_comparison, target_product['brand']
+    )
 
-        # Ensure the target product is not included in the similar products list
-        similar_products = [prod for prod in similar_products if prod[0] != asin]
-        similar_products.insert(0, target_product_entry)
+    # Ensure the target product is not included in the similar products list
+    similar_products = [prod for prod in similar_products if prod[0] != asin]
+    similar_products.insert(0, target_product_entry)
 
-        # Extract price and weighted scores from similar products
-        prices = [p[2] for p in similar_products]
-        weighted_scores = [p[3] for p in similar_products]
-        product_titles = [p[1] for p in similar_products]
-        asin_list = [p[0] for p in similar_products]
+    # Extract price and weighted scores from similar products
+    prices = [p[2] for p in similar_products]
+    weighted_scores = [p[3] for p in similar_products]
+    product_titles = [p[1] for p in similar_products]
+    asin_list = [p[0] for p in similar_products]
 
-        # Debug: Ensure the tuple format before DataFrame creation
-        #st.write(f"Final similar_products list: {similar_products}")
-        #st.write(f"Tuple length in similar_products (should be 12): {len(similar_products[0]) if similar_products else 'No products found'}")
+    # Debug: Ensure the tuple format before DataFrame creation
+    #st.write(f"Final similar_products list: {similar_products}")
+    #st.write(f"Tuple length in similar_products (should be 12): {len(similar_products[0]) if similar_products else 'No products found'}")
 
-        #Create DataFrame for competitors in scatter plot
-        scatter_competitors_df = pd.DataFrame(similar_products, columns=[
-            'ASIN', 'Title', 'Price', 'Weighted Score', 'Details Score', 
-            'Title Score', 'Description Score', 'Product Details', 
-            'Details Comparison', 'Title Comparison', 'Description Comparison', 'Brand'
-        ])
+    #Create DataFrame for competitors in scatter plot
+    scatter_competitors_df = pd.DataFrame(similar_products, columns=[
+        'ASIN', 'Title', 'Price', 'Weighted Score', 'Details Score', 
+        'Title Score', 'Description Score', 'Product Details', 
+        'Details Comparison', 'Title Comparison', 'Description Comparison', 'Brand'
+    ])
 
-        # Extract Product Dimension and Matching Features
-        scatter_competitors_df['Product Dimension'] = scatter_competitors_df['Product Details'].apply(
-            lambda details: details.get('Product Dimensions', 'N/A'))
+    # Extract Product Dimension and Matching Features
+    scatter_competitors_df['Product Dimension'] = scatter_competitors_df['Product Details'].apply(
+        lambda details: details.get('Product Dimensions', 'N/A'))
 
-        # Add matching compulsory features
-        scatter_competitors_df['Matching Features'] = scatter_competitors_df['Product Details'].apply(
-            lambda details: {feature: details.get(feature, 'N/A') for feature in compulsory_features}
-        )
+    # Add matching compulsory features
+    scatter_competitors_df['Matching Features'] = scatter_competitors_df['Product Details'].apply(
+        lambda details: {feature: details.get(feature, 'N/A') for feature in compulsory_features}
+    )
 
-        # Filter the dataframe to include only the required columns
-        scatter_competitors_df = scatter_competitors_df[['ASIN', 'Title', 'Price', 'Product Dimension', 'Brand', 'Matching Features']]
-        
-        # Cache the analysis results in session state
-        st.session_state["similar_products"] = similar_products
-        st.session_state["scatter_competitors_df"] = scatter_competitors_df
-        st.session_state["prices"] = [p[2] for p in similar_products]
-        st.session_state["weighted_scores"] = [p[3] for p in similar_products]
-        st.session_state["product_titles"] = [p[1] for p in similar_products]
-        st.session_state["asin_list"] = [p[0] for p in similar_products]
-        st.session_state["asin"] = asin  # Store asin in session for download use
-
-    # Retrieve cached data from session state for rendering
-    similar_products = st.session_state["similar_products"]
-    scatter_competitors_df = st.session_state["scatter_competitors_df"]
-    prices = st.session_state["prices"]
-    weighted_scores = st.session_state["weighted_scores"]
-    product_titles = st.session_state["product_titles"]
-    asin_list = st.session_state["asin_list"]
-
+    # Filter the dataframe to include only the required columns
+    scatter_competitors_df = scatter_competitors_df[['ASIN', 'Title', 'Price', 'Product Dimension', 'Brand', 'Matching Features']]
+    
+    st.session_state['scatter_competitor_files'] = scatter_competitors_df
 
     # Plot using Plotly
     fig = go.Figure()
@@ -819,9 +786,23 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     st.write(f"**Competitor Count**: {competitor_count}")
     st.write(f"**Number of Competitors with Null Price**: {price_null_count}")
 
-    # Call the download function here to render the download button
-    download_competitor_csv()
+    # Save the competitor DataFrame as a CSV
+    scatter_competitors_filename = f"scatter_competitors_{asin}.csv"
+    scatter_competitors_df.to_csv(scatter_competitors_filename, index=False)
+    #csv_buffer = io.StringIO()
+    #scatter_competitors_df.to_csv(csv_buffer, index=False)
+    #csv_data = csv_buffer.getvalue()
     
+    st.session_state['scatter_competitor_files'] = scatter_competitors_filename
+    # Download button for competitor products in scatter plot
+    #with open(scatter_competitors_filename, 'rb') as csv_data:
+    st.download_button(
+            label="Download Competitor Details from Scatter Plot Analysis",
+            data=scatter_competitors_filename,
+            file_name=scatter_competitors_filename,
+            mime='text/csv'
+        )
+
     # CPI Score Polar Plot
     competitor_prices = np.array(prices)
     cpi_score = calculate_cpi_score(target_price, competitor_prices)
@@ -1144,10 +1125,7 @@ def plot_distribution_graph(result_df, asin, selected_date):
 def run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_max, target_price, start_date, end_date, same_brand_option, compulsory_features):
     # Set recompute flag
     st.session_state['recompute'] = True
-    # Clear cached results when the "Analyze" button is clicked
-    st.session_state.pop("similar_products", None)
-    st.session_state.pop("scatter_competitors_df", None)
-
+    
 
     st.write("Inside Analysis")
 

@@ -784,13 +784,16 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
 
     # Save the competitor DataFrame as a CSV
     scatter_competitors_filename = f"scatter_competitors_{asin}.csv"
-    scatter_df = scatter_competitors_df.to_csv(scatter_competitors_filename, index=False)
+    #scatter_df = scatter_competitors_df.to_csv(scatter_competitors_filename, index=False)
+    csv_buffer = io.StringIO()
+    scatter_competitors_df.to_csv(csv_buffer, index=False)
+    csv_data = csv_buffer.getvalue()
 
     # Download button for competitor products in scatter plot
     #with open(scatter_competitors_filename, 'rb') as csv_data:
     st.download_button(
             label="Download Competitor Details from Scatter Plot Analysis",
-            data=scatter_df,
+            data=csv_data,
             file_name=scatter_competitors_filename,
             mime='text/csv'
         )

@@ -664,6 +664,23 @@ def show_features(asin):
 
     return product_details
 
+# Separate function to handle CSV download only
+def download_competitor_csv():
+    if "scatter_competitors_df" in st.session_state:
+        csv_buffer = io.StringIO()
+        st.session_state["scatter_competitors_df"].to_csv(csv_buffer, index=False)
+        csv_data = csv_buffer.getvalue()
+        
+        # Render the download button
+        st.download_button(
+            label="Download Competitor Details from Scatter Plot Analysis",
+            data=csv_data,
+            file_name=f"scatter_competitors_{st.session_state['asin']}.csv",
+            mime='text/csv'
+        )
+    else:
+        st.warning("No data available to download. Please run the analysis first.")
+
 def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, merged_data_df, compulsory_keywords, non_compulsory_keywords):
     
     # Check if results are already computed and available in session state
@@ -732,6 +749,7 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
         st.session_state["weighted_scores"] = [p[3] for p in similar_products]
         st.session_state["product_titles"] = [p[1] for p in similar_products]
         st.session_state["asin_list"] = [p[0] for p in similar_products]
+        st.session_state["asin"] = asin  # Store asin in session for download use
 
     # Retrieve cached data from session state for rendering
     similar_products = st.session_state["similar_products"]
@@ -740,6 +758,7 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     weighted_scores = st.session_state["weighted_scores"]
     product_titles = st.session_state["product_titles"]
     asin_list = st.session_state["asin_list"]
+
 
     # Plot using Plotly
     fig = go.Figure()
@@ -800,22 +819,9 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     st.write(f"**Competitor Count**: {competitor_count}")
     st.write(f"**Number of Competitors with Null Price**: {price_null_count}")
 
-    # Save the competitor DataFrame as a CSV
-    scatter_competitors_filename = f"scatter_competitors_{asin}.csv"
-    #scatter_df = scatter_competitors_df.to_csv(scatter_competitors_filename, index=False)
-    csv_buffer = io.StringIO()
-    scatter_competitors_df.to_csv(csv_buffer, index=False)
-    csv_data = csv_buffer.getvalue()
-
-    # Download button for competitor products in scatter plot
-    #with open(scatter_competitors_filename, 'rb') as csv_data:
-    st.download_button(
-            label="Download Competitor Details from Scatter Plot Analysis",
-            data=csv_data,
-            file_name=scatter_competitors_filename,
-            mime='text/csv'
-        )
-
+    # Call the download function here to render the download button
+    download_competitor_csv()
+    
     # CPI Score Polar Plot
     competitor_prices = np.array(prices)
     cpi_score = calculate_cpi_score(target_price, competitor_prices)

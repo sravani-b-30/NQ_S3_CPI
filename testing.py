@@ -416,11 +416,6 @@ def safe_literal_eval(val):
             return val  # Return original if evaluation fails
     return val
 
-
-# Store analysis results in session state
-    if 'analysis_results' not in st.session_state:
-        st.session_state['analysis_results'] = None  # Initialize empty
-
 def find_similar_asins(input_asin, asin_keyword_df):
 
     # Convert keyword_id_list column from string representation to actual lists
@@ -1401,6 +1396,10 @@ if 'compulsory_features' not in st.session_state:
     st.session_state['compulsory_features'] = compulsory_features
 if 'same_brand_option' not in st.session_state:
     st.session_state['same_brand_option'] = same_brand_option
+
+# Store analysis results in session state
+if 'analysis_results' not in st.session_state:
+    st.session_state['analysis_results'] = None  # Initialize empty
 
 if st.button("Analyze"):
         # Perform the analysis only if the button is clicked

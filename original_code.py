@@ -18,7 +18,7 @@ from datetime import datetime
 import dask.dataframe as dd
 from dask import delayed
 import io
-import json
+import csv
 
 
 nltk.download('punkt', quiet=True)
@@ -554,13 +554,15 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
                         weighted_score = calculate_weighted_score(details_score, title_score, desc_score)
                         #st.write(f"Tuple length: {len((asin, row['product_title'], row['price'], weighted_score, details_score, title_score, desc_score, compare_details, details_comparison, title_comparison, desc_comparison, compare_brand))}")
                         if weighted_score > 0:
-                            #st.write(f"Tuple data: {(asin, row['product_title'], row['price'], weighted_score, details_score, title_score, desc_score, compare_details, details_comparison, title_comparison, desc_comparison, compare_brand)}")
-                            #st.write(f"Tuple length: {len((asin, row['product_title'], row['price'], weighted_score, details_score, title_score, desc_score, compare_details, details_comparison, title_comparison, desc_comparison, compare_brand))}")
-
+                            matching_features = {}
+                            for feature in compulsory_features:
+                                if feature in target_details and feature in compare_details:
+                                    if target_details[feature] == compare_details[feature]:
+                                        matching_features[feature] = compare_details[feature]
                             similarities.append(
                                 (asin, row['product_title'], row['price'], weighted_score, details_score,
                                  title_score, desc_score, compare_details, details_comparison, title_comparison,
-                                 desc_comparison, compare_brand)
+                                 desc_comparison, compare_brand, matching_features)
                             )
                         unique_asins.add(asin)
                         seen_combinations.add(combination)
@@ -575,10 +577,15 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
                         )
                         weighted_score = calculate_weighted_score(details_score, title_score, desc_score)
                         if weighted_score > 0:
+                            matching_features = {}
+                            for feature in compulsory_features:
+                                if feature in target_details and feature in compare_details:
+                                    if target_details[feature] == compare_details[feature]:
+                                        matching_features[feature] = compare_details[feature]
                             similarities.append(
                                 (asin, row['product_title'], row['price'], weighted_score, details_score,
                                  title_score, desc_score, compare_details, details_comparison, title_comparison,
-                                 desc_comparison, compare_brand)
+                                 desc_comparison, compare_brand, matching_features)
                             )
                         unique_asins.add(asin)
                         seen_combinations.add(combination)
@@ -593,10 +600,15 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
                         )
                         weighted_score = calculate_weighted_score(details_score, title_score, desc_score)
                         if weighted_score > 0:
+                            matching_features = {}
+                            for feature in compulsory_features:
+                                if feature in target_details and feature in compare_details:
+                                    if target_details[feature] == compare_details[feature]:
+                                        matching_features[feature] = compare_details[feature]
                             similarities.append(
                                 (asin, row['product_title'], row['price'], weighted_score, details_score,
                                  title_score, desc_score, compare_details, details_comparison, title_comparison,
-                                 desc_comparison, compare_brand)
+                                 desc_comparison, compare_brand, matching_features)
                             )
                         unique_asins.add(asin)
                         seen_combinations.add(combination)
@@ -624,7 +636,7 @@ def run_analysis(asin, price_min, price_max, target_price, compulsory_features, 
     competitor_details_df = pd.DataFrame(similar_products, columns=[
         'ASIN', 'Title', 'Price', 'Weighted Score', 'Details Score',
         'Title Score', 'Description Score', 'Product Details',
-        'Details Comparison', 'Title Comparison', 'Description Comparison', 'Brand'
+        'Details Comparison', 'Title Comparison', 'Description Comparison', 'Brand', 'Matching Features'
     ])
 
     # Extract Product Dimension and Matching Features
@@ -632,9 +644,9 @@ def run_analysis(asin, price_min, price_max, target_price, compulsory_features, 
         lambda details: details.get('Product Dimensions', 'N/A'))
     
     # Add matching compulsory features
-    competitor_details_df['Matching Features'] = competitor_details_df['Product Details'].apply(
-        lambda details: {feature: details.get(feature, 'N/A') for feature in compulsory_features}
-    )
+    # competitor_details_df['Matching Features'] = competitor_details_df['Product Details'].apply(
+    #     lambda details: {feature: details.get(feature, 'N/A') for feature in compulsory_features}
+    # )
 
     # Filter the dataframe to include only the required columns
     competitor_details_df = competitor_details_df[['ASIN', 'Title', 'Price', 'Product Dimension', 'Brand', 'Matching Features']]
@@ -664,7 +676,34 @@ def show_features(asin):
 
     return product_details
 
-def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, merged_data_df, compulsory_keywords, non_compulsory_keywords):
+s3_client = boto3.client('s3')
+bucket_name = 'anarix-cpi'
+csv_folder = 'NAPQUEEN/' 
+
+# Function to generate the competitor data CSV and upload it to S3
+def upload_competitor_data_to_s3(competitors_data, asin):
+    # Generate CSV content
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=["ASIN", "Title", "Price", "Product Dimension", "Brand", "Matching Features"])
+    writer.writeheader()
+    writer.writerows(competitors_data)
+    csv_content = output.getvalue().encode('utf-8')
+
+    # Define the S3 key (file name) for the CSV
+    s3_key = f"{csv_folder}competitors_analysis_{asin}.csv"
+    
+    # Upload the CSV to S3
+    s3_client.put_object(Bucket=bucket_name, Key=s3_key, Body=csv_content, ContentType='text/csv')
+
+    # Generate a presigned URL for downloading the file
+    presigned_url = s3_client.generate_presigned_url('get_object',
+        Params={'Bucket': bucket_name, 'Key': s3_key},
+        ExpiresIn=3600  # URL expires in 1 hour
+    )
+    
+    return presigned_url
+
+def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, merged_data_df, compulsory_keywords, non_compulsory_keywords, generate_csv=False):
     
     # Find similar products
     similar_products = find_similar_products(asin, price_min, price_max, merged_data_df, compulsory_features, same_brand_option, compulsory_keywords, non_compulsory_keywords)
@@ -704,24 +743,18 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     #st.write(f"Final similar_products list: {similar_products}")
     #st.write(f"Tuple length in similar_products (should be 12): {len(similar_products[0]) if similar_products else 'No products found'}")
 
-    #Create DataFrame for competitors in scatter plot
-    scatter_competitors_df = pd.DataFrame(similar_products, columns=[
-        'ASIN', 'Title', 'Price', 'Weighted Score', 'Details Score', 
-        'Title Score', 'Description Score', 'Product Details', 
-        'Details Comparison', 'Title Comparison', 'Description Comparison', 'Brand'
-    ])
-
-    # Extract Product Dimension and Matching Features
-    scatter_competitors_df['Product Dimension'] = scatter_competitors_df['Product Details'].apply(
-        lambda details: details.get('Product Dimensions', 'N/A'))
-
-    # Add matching compulsory features
-    scatter_competitors_df['Matching Features'] = scatter_competitors_df['Product Details'].apply(
-        lambda details: {feature: details.get(feature, 'N/A') for feature in compulsory_features}
-    )
-
-    # Filter the dataframe to include only the required columns
-    scatter_competitors_df = scatter_competitors_df[['ASIN', 'Title', 'Price', 'Product Dimension', 'Brand', 'Matching Features']]
+    # Prepare competitors data for CSV
+    competitors_data = [
+        {
+            "ASIN": product[0],
+            "Title": product[1],
+            "Price": product[2],
+            "Product Dimension": product[7].get('Product Dimensions', ''),
+            "Brand": product[11],
+            "Matching Features": str(product[12]) if len(product) > 12 else "No Matching Features"
+        }
+        for product in similar_products
+    ]
 
     # Plot using Plotly
     fig = go.Figure()
@@ -782,21 +815,17 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     st.write(f"**Competitor Count**: {competitor_count}")
     st.write(f"**Number of Competitors with Null Price**: {price_null_count}")
 
-    # Save the competitor DataFrame as a CSV
-    scatter_competitors_filename = f"scatter_competitors_{asin}.csv"
-    #scatter_df = scatter_competitors_df.to_csv(scatter_competitors_filename, index=False)
-    csv_buffer = io.StringIO()
-    scatter_competitors_df.to_csv(csv_buffer, index=False)
-    csv_data = csv_buffer.getvalue()
+    # Store competitors data in session state
+    st.session_state['competitors_data'] = competitors_data
 
-    # Download button for competitor products in scatter plot
-    #with open(scatter_competitors_filename, 'rb') as csv_data:
-    st.download_button(
-            label="Download Competitor Details from Scatter Plot Analysis",
-            data=csv_data,
-            file_name=scatter_competitors_filename,
-            mime='text/csv'
-        )
+    # If user requested a CSV, upload it to S3 and provide the download link
+    if generate_csv:
+        download_link = upload_competitor_data_to_s3(competitors_data, asin)
+        st.session_state['csv_download_link'] = download_link
+
+    # Display CSV download link if available
+    if 'csv_download_link' in st.session_state:
+        st.markdown(f"[Download Competitor Analysis CSV]({st.session_state['csv_download_link']})")
 
     # CPI Score Polar Plot
     competitor_prices = np.array(prices)
@@ -1162,11 +1191,11 @@ def run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_ma
 
     # Check if we should perform time-series analysis (only if brand == 'napqueen' and dates are provided)
     if target_brand.upper() == "NAPQUEEN" and start_date and end_date:
-        perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, df_recent, compulsory_keywords, non_compulsory_keywords)
+        perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, df_recent, compulsory_keywords, non_compulsory_keywords, generate_csv=generate_csv_option)
         calculate_and_plot_cpi(merged_data_df, price_data_df, [asin], start_date, end_date, price_min, price_max, compulsory_features, same_brand_option)
     else:
         # Perform scatter plot only
-        perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, df_recent, compulsory_keywords, non_compulsory_keywords)
+        perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, df_recent, compulsory_keywords, non_compulsory_keywords, generate_csv=generate_csv_option)
 
 
 # Load data globally before starting the Streamlit app
@@ -1222,6 +1251,8 @@ with col3:
 
 # Target price input
 target_price = st.number_input("Target Price", value=0.00)
+
+generate_csv_option = st.checkbox("Generate CSV file for download", value=True)
 
 # Checkbox for including time-series analysis, placed directly after Target Price
 include_dates = st.checkbox("Include Dates for Time-Series Analysis", value=True)

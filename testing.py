@@ -620,22 +620,6 @@ def run_analysis(asin, price_min, price_max, target_price, compulsory_features, 
     size = target_product['Product Details'].get('Size', 'N/A')
     product_dimension = target_product['Product Details'].get('Product Dimensions', 'N/A')
 
-    # Create a DataFrame to store competitor details
-    competitor_details_df = pd.DataFrame(similar_products, columns=[
-        'ASIN', 'Title', 'Price', 'Weighted Score', 'Details Score',
-        'Title Score', 'Description Score', 'Product Details',
-        'Details Comparison', 'Title Comparison', 'Description Comparison', 'Brand'
-    ])
-
-    # Extract Product Dimension and Matching Features
-    competitor_details_df['Product Dimension'] = competitor_details_df['Product Details'].apply(
-        lambda details: details.get('Product Dimensions', 'N/A'))
-    
-    # Add matching compulsory features
-    competitor_details_df['Matching Features'] = competitor_details_df['Product Details'].apply(
-        lambda details: {feature: details.get(feature, 'N/A') for feature in compulsory_features}
-    )
-
     # Filter the dataframe to include only the required columns
     competitor_details_df = competitor_details_df[['ASIN', 'Title', 'Price', 'Product Dimension', 'Brand', 'Matching Features']]
     date = merged_data_df['date'].max().strftime('%Y-%m-%d')
@@ -671,10 +655,6 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     # Find similar products
     similar_products = find_similar_products(asin, price_min, price_max, merged_data_df, compulsory_features, same_brand_option, compulsory_keywords, non_compulsory_keywords)
 
-    # Debug: Check the length and contents of similar_products before creating DataFrame
-    #st.write(f"Number of similar products found: {len(similar_products)}")
-    #st.write(f"Contents of similar_products: {similar_products}")
-
     # Retrieve target product information
     target_product = merged_data_df[merged_data_df['ASIN'] == asin].iloc[0]
     target_title = str(target_product['product_title']).lower()
@@ -702,29 +682,6 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     product_titles = [p[1] for p in similar_products]
     asin_list = [p[0] for p in similar_products]
 
-    # Debug: Ensure the tuple format before DataFrame creation
-    #st.write(f"Final similar_products list: {similar_products}")
-    #st.write(f"Tuple length in similar_products (should be 12): {len(similar_products[0]) if similar_products else 'No products found'}")
-
-    #Create DataFrame for competitors in scatter plot
-    scatter_competitors_df = pd.DataFrame(similar_products, columns=[
-        'ASIN', 'Title', 'Price', 'Weighted Score', 'Details Score', 
-        'Title Score', 'Description Score', 'Product Details', 
-        'Details Comparison', 'Title Comparison', 'Description Comparison', 'Brand'
-    ])
-
-    # Extract Product Dimension and Matching Features
-    scatter_competitors_df['Product Dimension'] = scatter_competitors_df['Product Details'].apply(
-        lambda details: details.get('Product Dimensions', 'N/A'))
-
-    # Add matching compulsory features
-    scatter_competitors_df['Matching Features'] = scatter_competitors_df['Product Details'].apply(
-        lambda details: {feature: details.get(feature, 'N/A') for feature in compulsory_features}
-    )
-
-    # Filter the dataframe to include only the required columns
-    scatter_competitors_df = scatter_competitors_df[['ASIN', 'Title', 'Price', 'Product Dimension', 'Brand', 'Matching Features']]
-    
     # Plot using Plotly
     fig = go.Figure()
 
@@ -784,26 +741,6 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     st.write(f"**Competitor Count**: {competitor_count}")
     st.write(f"**Number of Competitors with Null Price**: {price_null_count}")
 
-    # Display the analysis results if they exist in session state
-    if st.session_state['analysis_results']:
-        asin, target_price, cpi_score, num_competitors, size, product_dimension, prices, competitors_df, dynamic_cpi_score = st.session_state['analysis_results']
-
-    # Save the competitor DataFrame as a CSV
-    scatter_competitors_filename = f"scatter_competitors_{asin}.csv"
-    scatter_competitors_df.to_csv(scatter_competitors_filename, index=False)
-    #csv_buffer = io.StringIO()
-    #scatter_competitors_df.to_csv(csv_buffer, index=False)
-    #csv_data = csv_buffer.getvalue()
-    
-    # Download button for competitor products in scatter plot
-    #with open(scatter_competitors_filename, 'rb') as csv_data:
-    st.download_button(
-            label="Download Competitor Details from Scatter Plot Analysis",
-            data=scatter_competitors_filename,
-            file_name=scatter_competitors_filename,
-            mime='text/csv'
-        )
-    
     # CPI Score Polar Plot
     competitor_prices = np.array(prices)
     cpi_score = calculate_cpi_score(target_price, competitor_prices)
@@ -1397,14 +1334,5 @@ if 'compulsory_features' not in st.session_state:
 if 'same_brand_option' not in st.session_state:
     st.session_state['same_brand_option'] = same_brand_option
 
-# Store analysis results in session state
-if 'analysis_results' not in st.session_state:
-    st.session_state['analysis_results'] = None  # Initialize empty
-
 if st.button("Analyze"):
-        # Perform the analysis only if the button is clicked
-        result = run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_max, 
-                                    target_price, start_date, end_date, same_brand_option, compulsory_features)
-        
-        # Save the results in session state to persist them
-        st.session_state['analysis_results'] = result
+    run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_max, target_price, start_date, end_date, same_brand_option, compulsory_features)

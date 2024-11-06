@@ -360,6 +360,7 @@ def load_and_preprocess_data(s3_folder):
     # Define regular expressions to normalize the style
     style_pattern = r"\b(\d+)\s*(inches?|in|inch|\"|''|'\s*'\s*)\b"
     style_pattern_with_quote = r"\b(\d+)\s*(''{1,2})"
+    style_pattern_without_space = r"\b(\d+)\""
 
     # Function to normalize style values
     def normalize_style(value):
@@ -377,7 +378,13 @@ def load_and_preprocess_data(s3_folder):
                 # Extract the number and return in "{number} Inch" format
                 number = match.group(1)
                 return f"{number} Inch"
-        
+            # Match using the second pattern (with quotes like 5'' or 5"")
+            match = re.search(style_pattern_without_space, value, re.IGNORECASE)
+            if match:
+                # Extract the number and return in "{number} Inch" format
+                number = match.group(1)
+                return f"{number} Inch"
+            
         return value  # Return the original value if it doesn't match any pattern
 
     # Function to rename and normalize 'Product Details' keys

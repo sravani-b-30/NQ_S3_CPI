@@ -364,12 +364,21 @@ def load_and_preprocess_data(s3_folder):
     # Function to normalize style values
     def normalize_style(value):
         if isinstance(value, str):
-            match = re.search(style_pattern, value, re.IGNORECASE) or re.search(style_pattern_with_quote, value, re.IGNORECASE)
+            # Match using the first pattern
+            match = re.search(style_pattern, value, re.IGNORECASE)
             if match:
                 # Extract the number and return in "{number} Inch" format
                 number = match.group(1)
                 return f"{number} Inch"
-        return value  # Return the original value if it doesn't match the pattern
+            
+            # Match using the second pattern (with quotes like 5'' or 5"")
+            match = re.search(style_pattern_with_quote, value, re.IGNORECASE)
+            if match:
+                # Extract the number and return in "{number} Inch" format
+                number = match.group(1)
+                return f"{number} Inch"
+        
+        return value  # Return the original value if it doesn't match any pattern
 
     # Function to rename and normalize 'Product Details' keys
     def rename_and_normalize_product_details(details):

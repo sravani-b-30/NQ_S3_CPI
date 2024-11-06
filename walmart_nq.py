@@ -325,7 +325,10 @@ def load_and_preprocess_data(s3_folder):
     merged_data_df = merged_data_df.rename(columns={"id": "asin", "Specifications": "Product Details", "brand_name":"brand" , "analysis_date":"date"})
 
     merged_data_df['asin'] = merged_data_df['asin'].str.upper()
-
+    
+    # Convert 'Product Details' from string to dictionary
+    merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(parse_dict_str)
+    
     # Display the type and sample values of 'Product Details' to understand its format
     st.write("Inspecting 'Product Details' format for the first few rows in the raw data:")
     for idx, details in enumerate(merged_data_df['Product Details'].head(10)):

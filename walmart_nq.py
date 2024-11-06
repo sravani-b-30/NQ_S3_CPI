@@ -332,7 +332,7 @@ def load_and_preprocess_data(s3_folder):
                         else {} if isinstance(details, list)  # Convert lists to empty dictionaries
                         else details  # Leave dictionaries as they are
     )
-    
+
     def fill_missing_brand(df):
         # Fill 'brand' from 'Product Details' dictionary's 'Brand' key, if it exists
         has_brand_in_details = df['Product Details'].apply(lambda details: details.get('Brand') if isinstance(details, dict) else None)
@@ -363,6 +363,10 @@ def load_and_preprocess_data(s3_folder):
     def ensure_size_style_from_title(row):
         details = row['Product Details']
         
+        # Ensure 'details' is a dictionary; if it's a list or other type, convert it to an empty dictionary
+        if not isinstance(details, dict):
+            details = {}  # Set to an empty dictionary if it's not already one
+
         # Check if 'Size' and 'Style' are missing and extract from 'product_title' if necessary
         if not details.get('Size'):
             details['Size'] = extract_size(row['product_title'])

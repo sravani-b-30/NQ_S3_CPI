@@ -312,7 +312,7 @@ details_key_rename_map = {
     'Bed Size': 'Size',
     'Mattress Thickness': 'Style',
     'Maximum Load Weight': 'Weight',
-    'Assembled Product Dimensions': 'Product Dimensions'
+    'Assembled Product Dimensions (L x W x H)': 'Product Dimensions'
 }
 
 # Function to convert list of key-value pairs to a dictionary
@@ -372,7 +372,32 @@ def load_and_preprocess_data(s3_folder):
         return details
 
     merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(rename_product_details_keys)
+    
+    def update_product_details(row):
+        details = row['Product Details']
+        details['Style'] = row['Style']
+        details['Size'] = row['Size']
+        return details
 
+    merged_data_df['Product Details'] = merged_data_df.apply(update_product_details, axis=1)
+
+    def extract_dimensions(details):
+        # Check if 'Product Dimensions' exists in the dictionary
+        if isinstance(details, dict):
+            return details.get('Product Dimensions', None)
+        return None
+
+    # Create a new column 'Product Dimensions' by extracting from 'Product Details'
+    merged_data_df['Product Dimensions'] = merged_data_df['Product Details'].apply(extract_dimensions)
+
+    reference_df = pd.read_csv('product_dimension_size_style_reference.csv')
+
+    merged_data_df = pd.merge(merged_data_df, reference_df, on='Product Dimensions', how='left', suffixes=('', '_ref'))
+
+    # Fill missing values in 'Size' and 'Style' columns with the values from the reference DataFrame
+    merged_data_df['Size'] = merged_data_df['Size'].fillna(merged_data_df['Size_ref'])
+    merged_data_df['Style'] = merged_data_df['Style'].fillna(merged_data_df['Style_ref'])
+        
     # # Step 3: Ensure 'Size' and 'Style' are filled from 'product_title' if missing, preserving other keys
     # def ensure_size_style_from_title(row):
     #     details = row['Product Details']
@@ -949,7 +974,7 @@ def process_date(merged_data_df, asin, date_str, price_min, price_max, compulsor
         'competitors': result[7]
     }
 
-def calculate_and_plot_cpi(merged_data_df, price_data_df, asin_list, start_date, end_date, price_min, price_max, compulsory_features, same_brand_option):
+def calculate_and_plot_cpi(merged_data_df, asin_list, start_date, end_date, price_min, price_max, compulsory_features, same_brand_option):
     asin = asin_list[0]
     dates_to_process = []
 

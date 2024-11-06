@@ -362,7 +362,7 @@ def load_and_preprocess_data(s3_folder):
     # Step 3: Ensure 'Size' and 'Style' by extracting from product_title for missing values
     def ensure_size_style_from_title(row):
         details = row['Product Details']
-        
+
         # Ensure 'details' is a dictionary; if it's a list or other type, convert it to an empty dictionary
         if not isinstance(details, dict):
             details = {}  # Set to an empty dictionary if it's not already one
@@ -385,7 +385,7 @@ def load_and_preprocess_data(s3_folder):
     reference_df = pd.read_csv('product_dimension_size_style_reference.csv')
 
     # Merge with the reference DataFrame based on 'Product Dimensions'
-    merged_data_df = merged_data_df.merge(reference_df, on='Product Dimensions', how='left', suffixes=('', '_ref'))
+    merged_data_df = pd.merge(merged_data_df, reference_df, on='Product Dimensions', how='left', suffixes=('', '_ref'))
 
     # Fill missing 'Size' and 'Style' values from the reference DataFrame
     merged_data_df['Size'] = merged_data_df['Size'].fillna(merged_data_df['Size_ref'])

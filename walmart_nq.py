@@ -350,7 +350,10 @@ def load_and_preprocess_data(s3_folder):
     merged_data_df['Size'] = merged_data_df['product_title'].apply(extract_size)
 
     def update_product_details(row):
+        # Ensure 'Product Details' is a dictionary
         details = row['Product Details']
+        if not isinstance(details, dict):
+            details = {}  # Initialize as an empty dictionary if it's not already one
         details['Style'] = row['Style']
         details['Size'] = row['Size']
         return details

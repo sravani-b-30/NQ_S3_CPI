@@ -386,7 +386,10 @@ def load_and_preprocess_data(s3_folder):
 
     # Merge with the reference DataFrame based on 'Product Dimensions'
     merged_data_df = pd.merge(merged_data_df, reference_df, on='Product Dimensions', how='left', suffixes=('', '_ref'))
-
+    
+    # Check the columns after merging to confirm that 'Size_ref' and 'Style_ref' are created
+    st.write("Columns in merged_data_df after merge:", merged_data_df.columns.tolist())
+    
     # Fill missing 'Size' and 'Style' values from the reference DataFrame
     merged_data_df['Size'] = merged_data_df['Size'].fillna(merged_data_df['Size_ref'])
     merged_data_df['Style'] = merged_data_df['Style'].fillna(merged_data_df['Style_ref'])

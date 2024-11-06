@@ -1151,7 +1151,7 @@ def run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_ma
     df_recent = df_recent.drop_duplicates(subset=['asin'])
 
     # Ensure that ASIN exists in the dataset
-    if asin not in merged_data_df['ASIN'].values:
+    if asin not in merged_data_df['asin'].values:
         st.error("Error: ASIN not found.")
         return
     
@@ -1166,7 +1166,7 @@ def run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_ma
         return
     
     # Extract the product information for the target ASIN
-    target_product = merged_data_df[merged_data_df['ASIN'] == asin].iloc[0]
+    target_product = merged_data_df[merged_data_df['asin'] == asin].iloc[0]
     target_brand = target_product['brand'].lower() if 'brand' in target_product else None
 
     if target_brand is None:
@@ -1261,7 +1261,7 @@ if 'show_features_clicked' not in st.session_state:
 
 # Button to toggle show/hide for product details
 if st.button("Show Features"):
-    if asin in merged_data_df['ASIN'].values:
+    if asin in merged_data_df['asin'].values:
         # Toggle the session state value: If it's True, set it to False; if it's False, set it to True
         st.session_state['show_features_clicked'] = not st.session_state['show_features_clicked']
     else:
@@ -1273,8 +1273,8 @@ if st.session_state['show_features_clicked'] and asin in merged_data_df['ASIN'].
 
 # Automatically display checkboxes for each product detail feature (if ASIN exists)
 compulsory_features_vars = {}
-if asin in merged_data_df['ASIN'].values:
-    product_details = merged_data_df[merged_data_df['ASIN'] == asin].iloc[0]['Product Details']
+if asin in merged_data_df['asin'].values:
+    product_details = merged_data_df[merged_data_df['asin'] == asin].iloc[0]['Product Details']
     st.write("Select compulsory features:")
     for feature in product_details.keys():
         compulsory_features_vars[feature] = st.checkbox(f"Include {feature}", key=f"checkbox_{feature}")

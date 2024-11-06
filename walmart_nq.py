@@ -326,8 +326,11 @@ def load_and_preprocess_data(s3_folder):
 
     merged_data_df['asin'] = merged_data_df['asin'].str.upper()
 
+    # Convert 'Product Details' to dictionaries if they are strings
     merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(
-    lambda details: parse_dict_str(details) if isinstance(details, str) else details
+        lambda details: parse_dict_str(details) if isinstance(details, str)
+                        else {} if isinstance(details, list)  # Convert lists to empty dictionaries
+                        else details  # Leave dictionaries as they are
     )
 
     def fill_missing_brand(df):
@@ -395,7 +398,12 @@ def load_and_preprocess_data(s3_folder):
     st.write("Checking keys in 'Product Details' for each product:")
     for _, row in merged_data_df.iterrows():
         details = row['Product Details']
-        st.write(f"ASIN: {row['asin']}, Product Details Keys: {list(details.keys())}")
+        # Safely check for keys only if 'details' is a dictionary
+        if isinstance(details, dict):
+            st.write(f"ASIN: {row['asin']}, Product Details Keys: {list(details.keys())}")
+        else:
+            st.write(f"ASIN: {row['asin']}, Product Details is not a dictionary")
+
 
     # Extract `asin` and `keyword` columns to create asin_keyword_df
     asin_keyword_df = merged_data_df[['asin', 'keyword']].copy()

@@ -326,6 +326,9 @@ def load_and_preprocess_data(s3_folder):
 
     merged_data_df['asin'] = merged_data_df['asin'].str.upper()
 
+    # Ensure all 'Product Details' are dictionaries by parsing strings
+    merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(parse_dict_str)
+
     def fill_missing_brand(df):
         # Fill 'brand' from 'Product Details' dictionary's 'Brand' key, if it exists
         has_brand_in_details = df['Product Details'].apply(lambda details: details.get('Brand') if isinstance(details, dict) else None)

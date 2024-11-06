@@ -326,6 +326,11 @@ def load_and_preprocess_data(s3_folder):
 
     merged_data_df['asin'] = merged_data_df['asin'].str.upper()
 
+    # Display the type and sample values of 'Product Details' to understand its format
+    st.write("Inspecting 'Product Details' format for the first few rows in the raw data:")
+    for idx, details in enumerate(merged_data_df['Product Details'].head(10)):
+        st.write(f"Row {idx} - Type: {type(details)}, Value: {details}")
+
     # # Convert 'Product Details' to dictionaries if they are strings
     # merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(
     #     lambda details: parse_dict_str(details) if isinstance(details, str)

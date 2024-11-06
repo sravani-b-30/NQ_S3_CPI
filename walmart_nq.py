@@ -373,6 +373,9 @@ def load_and_preprocess_data(s3_folder):
 
     merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(rename_product_details_keys)
     
+    merged_data_df['Style'] = merged_data_df['product_title'].apply(extract_style)
+    merged_data_df['Size'] = merged_data_df['product_title'].apply(extract_size)
+    
     def update_product_details(row):
         details = row['Product Details']
         details['Style'] = row['Style']

@@ -326,11 +326,8 @@ def load_and_preprocess_data(s3_folder):
 
     merged_data_df['asin'] = merged_data_df['asin'].str.upper()
 
-    # Convert 'Product Details' entries to dictionaries if they are strings or lists
     merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(
-        lambda details: parse_dict_str(details) if isinstance(details, str) 
-                        else {} if isinstance(details, list)  # Convert lists to empty dictionaries
-                        else details  # Leave dictionaries as they are
+    lambda details: parse_dict_str(details) if isinstance(details, str) else details
     )
 
     def fill_missing_brand(df):
@@ -349,62 +346,49 @@ def load_and_preprocess_data(s3_folder):
 
     merged_data_df['price'] = pd.to_numeric(merged_data_df['price'], errors='coerce')
 
-    # Rename keys within the 'Product Details' dictionary column
+    # Step 2: Rename specific keys within 'Product Details' dictionary
     def rename_product_details_keys(details):
         if isinstance(details, dict):
-            # Rename keys based on the mapping
+            # Rename keys based on mapping while keeping other keys intact
             return {details_key_rename_map.get(key, key): value for key, value in details.items()}
         return details
 
-    # Apply the renaming function to the 'Product Details' column
     merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(rename_product_details_keys)
 
-    # Step 3: Ensure 'Size' and 'Style' by extracting from product_title for missing values
-    # Ensure 'Size' and 'Style' are added from product_title if missing, without removing other keys
+    # Step 3: Ensure 'Size' and 'Style' are filled from 'product_title' if missing, preserving other keys
     def ensure_size_style_from_title(row):
         details = row['Product Details']
-        
-        # Ensure 'details' is a dictionary; if not, convert to an empty dictionary
         if not isinstance(details, dict):
-            details = {}
-        
+            details = {}  # Reset to dictionary if not already
+
         # Add 'Size' and 'Style' only if they're missing, preserving other keys
-        if 'Size' not in details or not details['Size']:
-            details['Size'] = extract_size(row['product_title'])
-        if 'Style' not in details or not details['Style']:
-            details['Style'] = extract_style(row['product_title'])
+        details.setdefault('Size', extract_size(row['product_title']) if not details.get('Size') else details['Size'])
+        details.setdefault('Style', extract_style(row['product_title']) if not details.get('Style') else details['Style'])
 
         return details
 
-    # Apply the function to fill missing Size and Style from product_title
     merged_data_df['Product Details'] = merged_data_df.apply(ensure_size_style_from_title, axis=1)
 
-    # Extract 'Product Dimensions' to a new column from 'Product Details'
-    merged_data_df['Product Dimensions'] = merged_data_df['Product Details'].apply(lambda details: details.get('Product Dimensions') if isinstance(details, dict) else None)
+    # Step 4: Extract and merge 'Product Dimensions' data, then fill missing 'Size' and 'Style' from reference_df
+    merged_data_df['Product Dimensions'] = merged_data_df['Product Details'].apply(
+        lambda details: details.get('Product Dimensions') if isinstance(details, dict) else None
+    )
 
-    # Load the reference data for Product Dimensions mapping
     reference_df = pd.read_csv('product_dimension_size_style_reference.csv')
+    merged_data_df = pd.merge(merged_data_df, reference_df, on='Product Dimensions', how='left')
 
-    # Merge with the reference DataFrame based on 'Product Dimensions'
-    merged_data_df = pd.merge(merged_data_df, reference_df, on='Product Dimensions', how='left') # suffixes=('', '_ref'))
-    
-    # Check the columns after merging to confirm that 'Size_ref' and 'Style_ref' are created
-    st.write("Columns in merged_data_df after merge:", merged_data_df.columns.tolist())
-
-    # Fill missing 'Size' and 'Style' values from the reference DataFrame
+    # Step 5: Fill missing 'Size' and 'Style' in the main DataFrame using the reference DataFrame values
     merged_data_df['Size'] = merged_data_df['Size'].fillna(merged_data_df['Size'])
     merged_data_df['Style'] = merged_data_df['Style'].fillna(merged_data_df['Style'])
 
-    # Step 5: Update Product Details with any final Size and Style values from the reference data
+    # Step 6: Finalize 'Product Details' by adding final 'Size' and 'Style' without replacing existing keys
     def finalize_product_details(row):
         details = row['Product Details']
         if isinstance(details, dict):
-            details['Size'] = row['Size']
-            details['Style'] = row['Style']
+            details['Size'] = details.get('Size') or row['Size']
+            details['Style'] = details.get('Style') or row['Style']
         return details
 
-
-    # Apply final updates to Product Details
     merged_data_df['Product Details'] = merged_data_df.apply(finalize_product_details, axis=1)
 
     # Use Streamlit to display the keys in 'Product Details' for each row

@@ -338,7 +338,7 @@ def load_and_preprocess_data(s3_folder):
 
     # Display the type and sample values of 'Product Details' to understand its format
     st.write("Inspecting 'Product Details' format for the first few rows in the raw data:")
-    for idx, details in enumerate(merged_data_df['Product Details'].head(10)):
+    for idx, details in enumerate(merged_data_df['Product Details'].head(3)):
         st.write(f"Row {idx} - Type: {type(details)}, Value: {details}")
 
     # # Convert 'Product Details' to dictionaries if they are strings
@@ -367,22 +367,31 @@ def load_and_preprocess_data(s3_folder):
     # Step 2: Rename specific keys within 'Product Details' dictionary
     def rename_product_details_keys(details):
         if isinstance(details, dict):
-            # Rename keys based on mapping while keeping other keys intact
-            return {details_key_rename_map.get(key, key): value for key, value in details.items()}
+            renamed_details = {details_key_rename_map.get(key, key): value for key, value in details.items()}
+            return renamed_details
         return details
 
     merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(rename_product_details_keys)
+    st.write("After renaming keys in 'Product Details':")
+    for idx, details in enumerate(merged_data_df['Product Details'].head(3)):
+        st.write(f"Row {idx} - Keys: {list(details.keys())} if dict else Type: {type(details)}")
     
     merged_data_df['Style'] = merged_data_df['product_title'].apply(extract_style)
     merged_data_df['Size'] = merged_data_df['product_title'].apply(extract_size)
-    
+    st.write("Extracted 'Style' and 'Size' from 'product_title':")
+    st.write(merged_data_df[['asin', 'Style', 'Size']].head(3))
+
     def update_product_details(row):
         details = row['Product Details']
-        details['Style'] = row['Style']
-        details['Size'] = row['Size']
+        if isinstance(details, dict):
+            details['Style'] = row['Style']
+            details['Size'] = row['Size']
         return details
 
     merged_data_df['Product Details'] = merged_data_df.apply(update_product_details, axis=1)
+    st.write("Final 'Product Details' after adding 'Style' and 'Size':")
+    for idx, details in enumerate(merged_data_df['Product Details'].head(10)):
+        st.write(f"Row {idx} - Product Details: {details}")
 
     def extract_dimensions(details):
         # Check if 'Product Dimensions' exists in the dictionary
@@ -400,7 +409,10 @@ def load_and_preprocess_data(s3_folder):
     # Fill missing values in 'Size' and 'Style' columns with the values from the reference DataFrame
     merged_data_df['Size'] = merged_data_df['Size'].fillna(merged_data_df['Size_ref'])
     merged_data_df['Style'] = merged_data_df['Style'].fillna(merged_data_df['Style_ref'])
-        
+    # Debugging statement to check if missing 'Size' and 'Style' values were filled correctly
+    st.write("After filling missing 'Size' and 'Style' with reference data:")
+    st.write(merged_data_df[['asin', 'Size', 'Style', 'Size_ref', 'Style_ref']].head(3))
+
     # # Step 3: Ensure 'Size' and 'Style' are filled from 'product_title' if missing, preserving other keys
     # def ensure_size_style_from_title(row):
     #     details = row['Product Details']

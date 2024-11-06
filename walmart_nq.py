@@ -338,7 +338,7 @@ def load_and_preprocess_data(s3_folder):
 
     # Display the type and sample values of 'Product Details' to understand its format
     st.write("Inspecting 'Product Details' format for the first few rows in the raw data:")
-    for idx, details in enumerate(merged_data_df['Product Details'].head(3)):
+    for idx, details in enumerate(merged_data_df['Product Details'].head(10)):
         st.write(f"Row {idx} - Type: {type(details)}, Value: {details}")
 
     # # Convert 'Product Details' to dictionaries if they are strings
@@ -373,13 +373,13 @@ def load_and_preprocess_data(s3_folder):
 
     merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(rename_product_details_keys)
     st.write("After renaming keys in 'Product Details':")
-    for idx, details in enumerate(merged_data_df['Product Details'].head(3)):
+    for idx, details in enumerate(merged_data_df['Product Details'].head(10)):
         st.write(f"Row {idx} - Keys: {list(details.keys())} if dict else Type: {type(details)}")
     
     merged_data_df['Style'] = merged_data_df['product_title'].apply(extract_style)
     merged_data_df['Size'] = merged_data_df['product_title'].apply(extract_size)
     st.write("Extracted 'Style' and 'Size' from 'product_title':")
-    st.write(merged_data_df[['asin', 'Style', 'Size']].head(3))
+    st.write(merged_data_df[['asin', 'Style', 'Size']].head(10))
 
     def update_product_details(row):
         details = row['Product Details']
@@ -411,7 +411,7 @@ def load_and_preprocess_data(s3_folder):
     merged_data_df['Style'] = merged_data_df['Style'].fillna(merged_data_df['Style_ref'])
     # Debugging statement to check if missing 'Size' and 'Style' values were filled correctly
     st.write("After filling missing 'Size' and 'Style' with reference data:")
-    st.write(merged_data_df[['asin', 'Size', 'Style', 'Size_ref', 'Style_ref']].head(3))
+    st.write(merged_data_df[['asin', 'Size', 'Style', 'Size_ref', 'Style_ref']].head(10))
 
     # # Step 3: Ensure 'Size' and 'Style' are filled from 'product_title' if missing, preserving other keys
     # def ensure_size_style_from_title(row):

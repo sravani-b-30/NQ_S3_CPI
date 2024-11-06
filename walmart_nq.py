@@ -318,7 +318,7 @@ details_key_rename_map = {
 @st.cache_resource
 def load_and_preprocess_data(s3_folder):
     # Load data from the single CSV file
-    merged_data_df = load_latest_csv_from_s3(s3_folder, 'walmart_cpi_napqueen')
+    merged_data_df = load_latest_csv_from_s3(s3_folder, 'walmart_cpi_napqueen').compute()
     
     merged_data_df['id'] = merged_data_df['id'].astype(str)
     # Rename columns as specified
@@ -332,9 +332,9 @@ def load_and_preprocess_data(s3_folder):
         return df
 
     # Apply function across partitions
-    merged_data_df = merged_data_df.map_partitions(fill_missing_brand)
+    merged_data_df = fill_missing_brand(merged_data_df)
 
-    merged_data_df['price'] = dd.to_numeric(merged_data_df['price'], errors='coerce')
+    merged_data_df['price'] = pd.to_numeric(merged_data_df['price'], errors='coerce')
 
     # Rename keys within the 'Product Details' dictionary column
     def rename_product_details_keys(details):
@@ -374,7 +374,6 @@ def load_and_preprocess_data(s3_folder):
     merged_data_df['Size'] = merged_data_df['Size'].fillna(merged_data_df['Size_ref'])
     merged_data_df['Style'] = merged_data_df['Style'].fillna(merged_data_df['Style_ref'])
     
-    merged_data_df = merged_data_df.compute()
     st.dataframe(merged_data_df)
 
     # Extract `asin` and `keyword` columns to create asin_keyword_df

@@ -840,7 +840,7 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
 
     # Side panel content - competitor count and null price count
     competitor_count = len(similar_products)
-    price_null_count = merged_data_df[merged_data_df['ASIN'].isin(asin_list) & merged_data_df['price'].isnull()].shape[0]
+    price_null_count = merged_data_df[merged_data_df['asin'].isin(asin_list) & merged_data_df['price'].isnull()].shape[0]
 
     # Display the side panel content below the scatter plot
     st.subheader("Product Comparison Details")

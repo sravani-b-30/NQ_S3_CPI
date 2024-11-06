@@ -322,7 +322,7 @@ def load_and_preprocess_data(s3_folder):
     
     merged_data_df['id'] = merged_data_df['id'].astype(str)
     # Rename columns as specified
-    merged_data_df = merged_data_df.rename(columns={"id": "asin", "Specifications": "Product Details", "brand_name":"brand"})
+    merged_data_df = merged_data_df.rename(columns={"id": "asin", "Specifications": "Product Details", "brand_name":"brand" , "analysis_date":"date"})
 
     merged_data_df['asin'] = merged_data_df['asin'].str.upper()
 
@@ -1268,7 +1268,7 @@ if st.button("Show Features"):
         st.error("ASIN not found in dataset.")
 
 # Conditionally display the product details based on the session state
-if st.session_state['show_features_clicked'] and asin in merged_data_df['ASIN'].values:
+if st.session_state['show_features_clicked'] and asin in merged_data_df['asin'].values:
     show_features(asin)
 
 # Automatically display checkboxes for each product detail feature (if ASIN exists)

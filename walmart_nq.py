@@ -326,11 +326,13 @@ def load_and_preprocess_data(s3_folder):
 
     merged_data_df['asin'] = merged_data_df['asin'].str.upper()
 
-    # Convert only string representations in 'Product Details' to dictionaries
+    # Convert 'Product Details' entries to dictionaries if they are strings or lists
     merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(
-        lambda details: parse_dict_str(details) if isinstance(details, str) else details
+        lambda details: parse_dict_str(details) if isinstance(details, str) 
+                        else {} if isinstance(details, list)  # Convert lists to empty dictionaries
+                        else details  # Leave dictionaries as they are
     )
-
+    
     def fill_missing_brand(df):
         # Fill 'brand' from 'Product Details' dictionary's 'Brand' key, if it exists
         has_brand_in_details = df['Product Details'].apply(lambda details: details.get('Brand') if isinstance(details, dict) else None)

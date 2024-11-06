@@ -360,17 +360,18 @@ def load_and_preprocess_data(s3_folder):
     merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(rename_product_details_keys)
 
     # Step 3: Ensure 'Size' and 'Style' by extracting from product_title for missing values
+    # Ensure 'Size' and 'Style' are added from product_title if missing, without removing other keys
     def ensure_size_style_from_title(row):
         details = row['Product Details']
-
-        # Ensure 'details' is a dictionary; if it's a list or other type, convert it to an empty dictionary
+        
+        # Ensure 'details' is a dictionary; if not, convert to an empty dictionary
         if not isinstance(details, dict):
-            details = {}  # Set to an empty dictionary if it's not already one
-
-        # Check if 'Size' and 'Style' are missing and extract from 'product_title' if necessary
-        if not details.get('Size'):
+            details = {}
+        
+        # Add 'Size' and 'Style' only if they're missing, preserving other keys
+        if 'Size' not in details or not details['Size']:
             details['Size'] = extract_size(row['product_title'])
-        if not details.get('Style'):
+        if 'Style' not in details or not details['Style']:
             details['Style'] = extract_style(row['product_title'])
 
         return details
@@ -397,9 +398,11 @@ def load_and_preprocess_data(s3_folder):
     # Step 5: Update Product Details with any final Size and Style values from the reference data
     def finalize_product_details(row):
         details = row['Product Details']
-        details['Size'] = row['Size']
-        details['Style'] = row['Style']
+        if isinstance(details, dict):
+            details['Size'] = row['Size']
+            details['Style'] = row['Style']
         return details
+
 
     # Apply final updates to Product Details
     merged_data_df['Product Details'] = merged_data_df.apply(finalize_product_details, axis=1)

@@ -341,13 +341,6 @@ def load_and_preprocess_data(s3_folder):
     for idx, details in enumerate(merged_data_df['Product Details'].head(10)):
         st.write(f"Row {idx} - Type: {type(details)}, Value: {details}")
 
-    # # Convert 'Product Details' to dictionaries if they are strings
-    # merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(
-    #     lambda details: parse_dict_str(details) if isinstance(details, str)
-    #                     else {} if isinstance(details, list)  # Convert lists to empty dictionaries
-    #                     else details  # Leave dictionaries as they are
-    # )
-
     def fill_missing_brand(df):
         # Fill 'brand' from 'Product Details' dictionary's 'Brand' key, if it exists
         has_brand_in_details = df['Product Details'].apply(lambda details: details.get('Brand') if isinstance(details, dict) else None)
@@ -364,22 +357,76 @@ def load_and_preprocess_data(s3_folder):
 
     merged_data_df['price'] = pd.to_numeric(merged_data_df['price'], errors='coerce')
 
-    # Step 2: Rename specific keys within 'Product Details' dictionary
-    def rename_product_details_keys(details):
+    # Define regular expressions to normalize the style
+    style_pattern = r"\b(\d+)\s*(inches?|in|inch|\"|''|'\s*'\s*)\b"
+    style_pattern_with_quote = r"\b(\d+)\s*(''{1,2})"
+
+    # Function to normalize style values
+    def normalize_style(value):
+        if isinstance(value, str):
+            match = re.search(style_pattern, value, re.IGNORECASE) or re.search(style_pattern_with_quote, value, re.IGNORECASE)
+            if match:
+                # Extract the number and return in "{number} Inch" format
+                number = match.group(1)
+                return f"{number} Inch"
+        return value  # Return the original value if it doesn't match the pattern
+
+    # Function to rename and normalize 'Product Details' keys
+    def rename_and_normalize_product_details(details):
         if isinstance(details, dict):
+            # Rename keys based on mapping and normalize the 'Style' value if it exists
             renamed_details = {details_key_rename_map.get(key, key): value for key, value in details.items()}
+            
+            # Normalize 'Style' if present in the renamed details
+            if 'Style' in renamed_details:
+                renamed_details['Style'] = normalize_style(renamed_details['Style'])
+                
             return renamed_details
         return details
 
-    merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(rename_product_details_keys)
-    st.write("After renaming keys in 'Product Details':")
+    # Step 1: Apply renaming and normalization function to 'Product Details'
+    merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(rename_and_normalize_product_details)
+
+    # Debug output to check the results after renaming and normalizing
+    st.write("After renaming and normalizing keys in 'Product Details':")
     for idx, details in enumerate(merged_data_df['Product Details'].head(10)):
-        st.write(f"Row {idx} - Keys: {list(details.keys())} if dict else Type: {type(details)}")
-    
-    merged_data_df['Style'] = merged_data_df['product_title'].apply(extract_style)
-    merged_data_df['Size'] = merged_data_df['product_title'].apply(extract_size)
-    st.write("Extracted 'Style' and 'Size' from 'product_title':")
+        st.write(f"Row {idx} - Keys: {list(details.keys())}, Values: {details}")
+
+    # Step 2: Extract 'Size' and 'Style' from 'Product Details' if they exist
+    def extract_existing_size_style(details):
+        if isinstance(details, dict):
+            size = details.get('Size')  # Extract Size if it exists
+            style = details.get('Style')  # Extract normalized Style if it exists
+            return size, style
+        return None, None
+
+    # Populate 'Size' and 'Style' columns with existing values from 'Product Details'
+    merged_data_df[['Size', 'Style']] = merged_data_df['Product Details'].apply(lambda details: pd.Series(extract_existing_size_style(details)))
+
+    # Step 3: Apply extraction functions from 'product_title' only if 'Size' or 'Style' is missing
+    merged_data_df['Size'] = merged_data_df['Size'].fillna(merged_data_df['product_title'].apply(extract_size))
+    merged_data_df['Style'] = merged_data_df['Style'].fillna(merged_data_df['product_title'].apply(extract_style))
+
+    # Debug output to check the extracted 'Style' and 'Size'
+    st.write("After checking 'Product Details' and extracting missing 'Style' and 'Size' from 'product_title':")
     st.write(merged_data_df[['asin', 'Style', 'Size']].head(10))
+
+    # # Step 2: Rename specific keys within 'Product Details' dictionary
+    # def rename_product_details_keys(details):
+    #     if isinstance(details, dict):
+    #         renamed_details = {details_key_rename_map.get(key, key): value for key, value in details.items()}
+    #         return renamed_details
+    #     return details
+
+    # merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(rename_product_details_keys)
+    # st.write("After renaming keys in 'Product Details':")
+    # for idx, details in enumerate(merged_data_df['Product Details'].head(10)):
+    #     st.write(f"Row {idx} - Keys: {list(details.keys())} if dict else Type: {type(details)}")
+    
+    # merged_data_df['Style'] = merged_data_df['product_title'].apply(extract_style)
+    # merged_data_df['Size'] = merged_data_df['product_title'].apply(extract_size)
+    # st.write("Extracted 'Style' and 'Size' from 'product_title':")
+    # st.write(merged_data_df[['asin', 'Style', 'Size']].head(10))
 
     def update_product_details(row):
         details = row['Product Details']
@@ -412,53 +459,6 @@ def load_and_preprocess_data(s3_folder):
     # Debugging statement to check if missing 'Size' and 'Style' values were filled correctly
     st.write("After filling missing 'Size' and 'Style' with reference data:")
     st.write(merged_data_df[['asin', 'Size', 'Style', 'Size_ref', 'Style_ref']].head(10))
-
-    # # Step 3: Ensure 'Size' and 'Style' are filled from 'product_title' if missing, preserving other keys
-    # def ensure_size_style_from_title(row):
-    #     details = row['Product Details']
-    #     if not isinstance(details, dict):
-    #         details = {}  # Reset to dictionary if not already
-
-    #     # Add 'Size' and 'Style' only if they're missing, preserving other keys
-    #     details.setdefault('Size', extract_size(row['product_title']) if not details.get('Size') else details['Size'])
-    #     details.setdefault('Style', extract_style(row['product_title']) if not details.get('Style') else details['Style'])
-
-    #     return details
-
-    # merged_data_df['Product Details'] = merged_data_df.apply(ensure_size_style_from_title, axis=1)
-
-    # # Step 4: Extract and merge 'Product Dimensions' data, then fill missing 'Size' and 'Style' from reference_df
-    # merged_data_df['Product Dimensions'] = merged_data_df['Product Details'].apply(
-    #     lambda details: details.get('Product Dimensions') if isinstance(details, dict) else None
-    # )
-
-    # reference_df = pd.read_csv('product_dimension_size_style_reference.csv')
-    # merged_data_df = pd.merge(merged_data_df, reference_df, on='Product Dimensions', how='left')
-
-    # # Step 5: Fill missing 'Size' and 'Style' in the main DataFrame using the reference DataFrame values
-    # merged_data_df['Size'] = merged_data_df['Size'].fillna(merged_data_df['Size'])
-    # merged_data_df['Style'] = merged_data_df['Style'].fillna(merged_data_df['Style'])
-
-    # # Step 6: Finalize 'Product Details' by adding final 'Size' and 'Style' without replacing existing keys
-    # def finalize_product_details(row):
-    #     details = row['Product Details']
-    #     if isinstance(details, dict):
-    #         details['Size'] = details.get('Size') or row['Size']
-    #         details['Style'] = details.get('Style') or row['Style']
-    #     return details
-
-    # merged_data_df['Product Details'] = merged_data_df.apply(finalize_product_details, axis=1)
-
-    # Use Streamlit to display the keys in 'Product Details' for each row
-    # st.write("Checking keys in 'Product Details' for each product:")
-    # for _, row in merged_data_df.iterrows():
-    #     details = row['Product Details']
-    #     # Safely check for keys only if 'details' is a dictionary
-    #     if isinstance(details, dict):
-    #         st.write(f"ASIN: {row['asin']}, Product Details Keys: {list(details.keys())}")
-    #     else:
-    #         st.write(f"ASIN: {row['asin']}, Product Details is not a dictionary")
-
 
     # Extract `asin` and `keyword` columns to create asin_keyword_df
     asin_keyword_df = merged_data_df[['asin', 'keyword']].copy()

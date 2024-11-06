@@ -315,6 +315,13 @@ details_key_rename_map = {
     'Assembled Product Dimensions': 'Product Dimensions'
 }
 
+# Function to convert list of key-value pairs to a dictionary
+def list_to_dict(details):
+    if isinstance(details, list):
+        # Convert list of {'key': key, 'value': value} pairs into a single dictionary
+        return {item['key']: item['value'] for item in details if 'key' in item and 'value' in item}
+    return details  # If it's already a dictionary or another type, return as-is
+
 @st.cache_resource
 def load_and_preprocess_data(s3_folder):
     # Load data from the single CSV file
@@ -327,8 +334,8 @@ def load_and_preprocess_data(s3_folder):
     merged_data_df['asin'] = merged_data_df['asin'].str.upper()
     
     # Convert 'Product Details' from string to dictionary
-    merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(parse_dict_str)
-    
+    merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(parse_dict_str).apply(list_to_dict)
+
     # Display the type and sample values of 'Product Details' to understand its format
     st.write("Inspecting 'Product Details' format for the first few rows in the raw data:")
     for idx, details in enumerate(merged_data_df['Product Details'].head(10)):

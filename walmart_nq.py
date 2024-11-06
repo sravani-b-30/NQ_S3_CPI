@@ -355,41 +355,41 @@ def load_and_preprocess_data(s3_folder):
 
     merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(rename_product_details_keys)
 
-    # Step 3: Ensure 'Size' and 'Style' are filled from 'product_title' if missing, preserving other keys
-    def ensure_size_style_from_title(row):
-        details = row['Product Details']
-        if not isinstance(details, dict):
-            details = {}  # Reset to dictionary if not already
+    # # Step 3: Ensure 'Size' and 'Style' are filled from 'product_title' if missing, preserving other keys
+    # def ensure_size_style_from_title(row):
+    #     details = row['Product Details']
+    #     if not isinstance(details, dict):
+    #         details = {}  # Reset to dictionary if not already
 
-        # Add 'Size' and 'Style' only if they're missing, preserving other keys
-        details.setdefault('Size', extract_size(row['product_title']) if not details.get('Size') else details['Size'])
-        details.setdefault('Style', extract_style(row['product_title']) if not details.get('Style') else details['Style'])
+    #     # Add 'Size' and 'Style' only if they're missing, preserving other keys
+    #     details.setdefault('Size', extract_size(row['product_title']) if not details.get('Size') else details['Size'])
+    #     details.setdefault('Style', extract_style(row['product_title']) if not details.get('Style') else details['Style'])
 
-        return details
+    #     return details
 
-    merged_data_df['Product Details'] = merged_data_df.apply(ensure_size_style_from_title, axis=1)
+    # merged_data_df['Product Details'] = merged_data_df.apply(ensure_size_style_from_title, axis=1)
 
-    # Step 4: Extract and merge 'Product Dimensions' data, then fill missing 'Size' and 'Style' from reference_df
-    merged_data_df['Product Dimensions'] = merged_data_df['Product Details'].apply(
-        lambda details: details.get('Product Dimensions') if isinstance(details, dict) else None
-    )
+    # # Step 4: Extract and merge 'Product Dimensions' data, then fill missing 'Size' and 'Style' from reference_df
+    # merged_data_df['Product Dimensions'] = merged_data_df['Product Details'].apply(
+    #     lambda details: details.get('Product Dimensions') if isinstance(details, dict) else None
+    # )
 
-    reference_df = pd.read_csv('product_dimension_size_style_reference.csv')
-    merged_data_df = pd.merge(merged_data_df, reference_df, on='Product Dimensions', how='left')
+    # reference_df = pd.read_csv('product_dimension_size_style_reference.csv')
+    # merged_data_df = pd.merge(merged_data_df, reference_df, on='Product Dimensions', how='left')
 
-    # Step 5: Fill missing 'Size' and 'Style' in the main DataFrame using the reference DataFrame values
-    merged_data_df['Size'] = merged_data_df['Size'].fillna(merged_data_df['Size'])
-    merged_data_df['Style'] = merged_data_df['Style'].fillna(merged_data_df['Style'])
+    # # Step 5: Fill missing 'Size' and 'Style' in the main DataFrame using the reference DataFrame values
+    # merged_data_df['Size'] = merged_data_df['Size'].fillna(merged_data_df['Size'])
+    # merged_data_df['Style'] = merged_data_df['Style'].fillna(merged_data_df['Style'])
 
-    # Step 6: Finalize 'Product Details' by adding final 'Size' and 'Style' without replacing existing keys
-    def finalize_product_details(row):
-        details = row['Product Details']
-        if isinstance(details, dict):
-            details['Size'] = details.get('Size') or row['Size']
-            details['Style'] = details.get('Style') or row['Style']
-        return details
+    # # Step 6: Finalize 'Product Details' by adding final 'Size' and 'Style' without replacing existing keys
+    # def finalize_product_details(row):
+    #     details = row['Product Details']
+    #     if isinstance(details, dict):
+    #         details['Size'] = details.get('Size') or row['Size']
+    #         details['Style'] = details.get('Style') or row['Style']
+    #     return details
 
-    merged_data_df['Product Details'] = merged_data_df.apply(finalize_product_details, axis=1)
+    # merged_data_df['Product Details'] = merged_data_df.apply(finalize_product_details, axis=1)
 
     # Use Streamlit to display the keys in 'Product Details' for each row
     st.write("Checking keys in 'Product Details' for each product:")

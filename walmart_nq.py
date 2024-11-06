@@ -497,7 +497,7 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
     seen_combinations = set()
 
     for index, row in merged_data_df.iterrows():
-        if row['ASIN'] == asin:
+        if row['asin'] == asin:
             continue
         compare_brand = row['brand']
         if same_brand_option == 'only' and compare_brand != target_brand:
@@ -534,9 +534,9 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
             if keyword_option == 'Include Keywords':
                 # Check if the product matches the ASIN list and has all keywords present in the title
                 #all_keywords_present = all(keyword.lower() in compare_title for keyword in compulsory_keywords)
-                if compulsory_match and (row['ASIN'] in similar_asin_list):
+                if compulsory_match and (row['asin'] in similar_asin_list):
                     # Append the product to the similarities list
-                    asin = row['ASIN']
+                    asin = row['asin']
                     combination = (compare_title, row['price'], str(compare_details))
                     if combination not in seen_combinations and asin not in unique_asins:
                         details_score, title_score, desc_score, details_comparison, title_comparison, desc_comparison = calculate_similarity(
@@ -558,9 +558,9 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
                         unique_asins.add(asin)
                         seen_combinations.add(combination)
             elif keyword_option == 'Negate Keywords':
-                if compulsory_match and (row['ASIN'] in similar_asin_list):
+                if compulsory_match and (row['asin'] in similar_asin_list):
                     # Append the product to the similarities list
-                    asin = row['ASIN']
+                    asin = row['asin']
                     combination = (compare_title, row['price'], str(compare_details))
                     if combination not in seen_combinations and asin not in unique_asins:
                         details_score, title_score, desc_score, details_comparison, title_comparison, desc_comparison = calculate_similarity(
@@ -583,7 +583,7 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
             else:
                 # No keywords filtering, just use compulsory_match and add product directly
                 if compulsory_match:
-                    asin = row['ASIN']
+                    asin = row['asin']
                     combination = (compare_title, row['price'], str(compare_details))
                     if combination not in seen_combinations and asin not in unique_asins:
                         details_score, title_score, desc_score, details_comparison, title_comparison, desc_comparison = calculate_similarity(
@@ -617,9 +617,9 @@ def run_analysis(asin, price_min, price_max, target_price, compulsory_features, 
     competitor_prices = np.array(prices)
     cpi_score = calculate_cpi_score(target_price, competitor_prices)
     cpi_score_dynamic = calculate_cpi_score_updated(target_price, competitor_prices)
-    target_product = merged_data_df[merged_data_df['ASIN'] == asin].iloc[0]
+    target_product = merged_data_df[merged_data_df['asin'] == asin].iloc[0]
     num_competitors_found = len(similar_products)
-    target_product = merged_data_df[merged_data_df['ASIN'] == asin].iloc[0]
+    target_product = merged_data_df[merged_data_df['asin'] == asin].iloc[0]
     size = target_product['Product Details'].get('Size', 'N/A')
     product_dimension = target_product['Product Details'].get('Product Dimensions', 'N/A')
 
@@ -653,10 +653,10 @@ def show_features(asin):
         st.error("DataFrame is not initialized.")
         return
     show_features_df = st.session_state['show_features_df']
-    if asin not in show_features_df['ASIN'].values:
+    if asin not in show_features_df['asin'].values:
         st.error("ASIN not found.")
         return
-    target_product = show_features_df[show_features_df['ASIN'] == asin].iloc[0]
+    target_product = show_features_df[show_features_df['asin'] == asin].iloc[0]
     product_details = target_product['Product Details']  # **target_product['Glance Icon Details']}
 
     st.subheader(f"Product Details for ASIN: {asin}")
@@ -704,7 +704,7 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     #st.write(f"Contents of similar_products: {similar_products}")
 
     # Retrieve target product information
-    target_product = merged_data_df[merged_data_df['ASIN'] == asin].iloc[0]
+    target_product = merged_data_df[merged_data_df['asin'] == asin].iloc[0]
     target_title = str(target_product['product_title']).lower()
     target_desc = str(target_product['Description']).lower()
     target_details = target_product['Product Details']
@@ -1134,7 +1134,7 @@ def plot_distribution_graph(result_df, asin, selected_date):
 
     st.plotly_chart(fig)
 
-def run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_max, target_price, start_date, end_date, same_brand_option, compulsory_features):
+def run_analysis_button(merged_data_df, asin, price_min, price_max, target_price, start_date, end_date, same_brand_option, compulsory_features):
     # Set recompute flag
     st.session_state['recompute'] = True
     
@@ -1180,7 +1180,7 @@ def run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_ma
     # Check if we should perform time-series analysis (only if brand == 'napqueen' and dates are provided)
     if target_brand.upper() == "NAPQUEEN" and start_date and end_date:
         perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, df_recent, compulsory_keywords, non_compulsory_keywords, generate_csv=generate_csv_option)
-        calculate_and_plot_cpi(merged_data_df, price_data_df, [asin], start_date, end_date, price_min, price_max, compulsory_features, same_brand_option)
+        calculate_and_plot_cpi(merged_data_df, [asin], start_date, end_date, price_min, price_max, compulsory_features, same_brand_option)
     else:
         # Perform scatter plot only
         perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, df_recent, compulsory_keywords, non_compulsory_keywords, generate_csv=generate_csv_option)

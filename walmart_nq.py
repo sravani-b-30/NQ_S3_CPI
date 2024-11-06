@@ -377,7 +377,7 @@ def load_and_preprocess_data(s3_folder):
     merged_data_df['Size'] = merged_data_df['Size'].fillna(merged_data_df['Size_ref'])
     merged_data_df['Style'] = merged_data_df['Style'].fillna(merged_data_df['Style_ref'])
     
-    st.dataframe(merged_data_df)
+    #st.dataframe(merged_data_df)
 
     # Extract `asin` and `keyword` columns to create asin_keyword_df
     asin_keyword_df = merged_data_df[['asin', 'keyword']].copy()
@@ -390,7 +390,7 @@ asin_keyword_df, merged_data_df = load_and_preprocess_data(s3_folder)
 # Use session state to store the DataFrame and ensure it's available across sessions
 if 'show_features_df' not in st.session_state:
     # Load the data (this will be cached using st.cache_data)
-    _, _, merged_data_df, _  = load_and_preprocess_data(s3_folder)
+    _, merged_data_df = load_and_preprocess_data(s3_folder)
     st.session_state['show_features_df'] = merged_data_df
 else:
     merged_data_df = st.session_state['show_features_df']

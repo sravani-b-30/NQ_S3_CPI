@@ -327,8 +327,14 @@ def load_and_preprocess_data(s3_folder):
     merged_data_df['asin'] = merged_data_df['asin'].str.upper()
 
     def fill_missing_brand(df):
+        # Fill 'brand' from 'Product Details' dictionary's 'Brand' key, if it exists
+        has_brand_in_details = df['Product Details'].apply(lambda details: details.get('Brand') if isinstance(details, dict) else None)
+        df['brand'] = df['brand'].fillna(has_brand_in_details)
+        
+        # For remaining products with missing 'brand', extract from 'product_title'
         missing_brand_mask = df['brand'].isna() | (df['brand'] == "")
         df.loc[missing_brand_mask, 'brand'] = df.loc[missing_brand_mask, 'product_title'].apply(extract_brand_from_title)
+        
         return df
 
     # Apply function across partitions
@@ -346,38 +352,49 @@ def load_and_preprocess_data(s3_folder):
     # Apply the renaming function to the 'Product Details' column
     merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(rename_product_details_keys)
 
-    merged_data_df['Style'] = merged_data_df['product_title'].apply(extract_style)
-    merged_data_df['Size'] = merged_data_df['product_title'].apply(extract_size)
-
-    def update_product_details(row):
-        # Ensure 'Product Details' is a dictionary
+    # Step 3: Ensure 'Size' and 'Style' by extracting from product_title for missing values
+    def ensure_size_style_from_title(row):
         details = row['Product Details']
-        if not isinstance(details, dict):
-            details = {}  # Initialize as an empty dictionary if it's not already one
-        details['Style'] = row['Style']
-        details['Size'] = row['Size']
+        
+        # Check if 'Size' and 'Style' are missing and extract from 'product_title' if necessary
+        if not details.get('Size'):
+            details['Size'] = extract_size(row['product_title'])
+        if not details.get('Style'):
+            details['Style'] = extract_style(row['product_title'])
+
         return details
 
-    merged_data_df['Product Details'] = merged_data_df.apply(update_product_details, axis=1)
+    # Apply the function to fill missing Size and Style from product_title
+    merged_data_df['Product Details'] = merged_data_df.apply(ensure_size_style_from_title, axis=1)
 
-    def extract_dimensions(details):
-        # Check if 'Product Dimensions' exists in the dictionary
-        if isinstance(details, dict):
-            return details.get('Product Dimensions', None)
-        return None
+    # Extract 'Product Dimensions' to a new column from 'Product Details'
+    merged_data_df['Product Dimensions'] = merged_data_df['Product Details'].apply(lambda details: details.get('Product Dimensions') if isinstance(details, dict) else None)
 
-    # Create a new column 'Product Dimensions' by extracting from 'Product Details'
-    merged_data_df['Product Dimensions'] = merged_data_df['Product Details'].apply(extract_dimensions)
-
+    # Load the reference data for Product Dimensions mapping
     reference_df = pd.read_csv('product_dimension_size_style_reference.csv')
 
+    # Merge with the reference DataFrame based on 'Product Dimensions'
     merged_data_df = merged_data_df.merge(reference_df, on='Product Dimensions', how='left', suffixes=('', '_ref'))
 
-    # Fill missing values in 'Size' and 'Style' columns with the values from the reference DataFrame
+    # Fill missing 'Size' and 'Style' values from the reference DataFrame
     merged_data_df['Size'] = merged_data_df['Size'].fillna(merged_data_df['Size_ref'])
     merged_data_df['Style'] = merged_data_df['Style'].fillna(merged_data_df['Style_ref'])
-    
-    #st.dataframe(merged_data_df)
+
+    # Step 5: Update Product Details with any final Size and Style values from the reference data
+    def finalize_product_details(row):
+        details = row['Product Details']
+        details['Size'] = row['Size']
+        details['Style'] = row['Style']
+        return details
+
+    # Apply final updates to Product Details
+    merged_data_df['Product Details'] = merged_data_df.apply(finalize_product_details, axis=1)
+
+    # Use Streamlit to display the keys in 'Product Details' for each row
+    st.write("Checking keys in 'Product Details' for each product:")
+    for _, row in merged_data_df.iterrows():
+        details = row['Product Details']
+        st.write(f"ASIN: {row['asin']}, Product Details Keys: {list(details.keys())}")
 
     # Extract `asin` and `keyword` columns to create asin_keyword_df
     asin_keyword_df = merged_data_df[['asin', 'keyword']].copy()
@@ -485,7 +502,7 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
 
     #merged_data_df['identified_brand'] = merged_data_df['product_title'].apply(extract_brand_from_title)
 
-    target_product = merged_data_df[merged_data_df['ASIN'] == asin].iloc[0]
+    target_product = merged_data_df[merged_data_df['asin'] == asin].iloc[0]
     target_details = {**target_product['Product Details']}
 
     target_brand = target_product['brand']

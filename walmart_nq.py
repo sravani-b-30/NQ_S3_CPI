@@ -318,7 +318,7 @@ details_key_rename_map = {
 @st.cache_resource
 def load_and_preprocess_data(s3_folder):
     # Load data from the single CSV file
-    merged_data_df = load_latest_csv_from_s3(s3_folder, 'walmart_cpi_napqueen').compute()
+    merged_data_df = load_latest_csv_from_s3(s3_folder, 'walmart_cpi_napqueen')
     
     merged_data_df['id'] = merged_data_df['id'].astype(str)
     # Rename columns as specified

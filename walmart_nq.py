@@ -106,6 +106,12 @@ def parse_dict_str(dict_str):
     except ValueError:
         return {}
 
+# Function to convert list of key-value pairs to a dictionary
+def list_to_dict(details):
+    if isinstance(details, list):
+        # Convert list of {'key': key, 'value': value} pairs into a single dictionary
+        return {item['key']: item['value'] for item in details if 'key' in item and 'value' in item}
+    return details  # If it's already a dictionary or another type, return as-is
 
 def merge_dicts(dict1, dict2):
     merged = dict1.copy()
@@ -315,13 +321,6 @@ details_key_rename_map = {
     'Assembled Product Dimensions (L x W x H)': 'Product Dimensions'
 }
 
-# Function to convert list of key-value pairs to a dictionary
-def list_to_dict(details):
-    if isinstance(details, list):
-        # Convert list of {'key': key, 'value': value} pairs into a single dictionary
-        return {item['key']: item['value'] for item in details if 'key' in item and 'value' in item}
-    return details  # If it's already a dictionary or another type, return as-is
-
 @st.cache_resource
 def load_and_preprocess_data(s3_folder):
     # Load data from the single CSV file
@@ -358,33 +357,21 @@ def load_and_preprocess_data(s3_folder):
     merged_data_df['price'] = pd.to_numeric(merged_data_df['price'], errors='coerce')
 
     # Define regular expressions to normalize the style
-    style_pattern = r"\b(\d+)\s*(inches?|in|inch|\"|''|'\s*'\s*)\b"
-    style_pattern_with_quote = r"\b(\d+)\s*(''{1,2})"
-    style_pattern_without_space = r"\b(\d+)\""
+    style_pattern = r"\b(\d+(?:\.\d+)?)(?:-|\s*)?(?:inches?|in|inch|\"|''|'\s*'\s*)\b"
 
-    # Function to normalize style values
+    # Updated normalize_style function to handle decimal and hyphenated numbers
     def normalize_style(value):
         if isinstance(value, str):
-            # Match using the first pattern
+            # Match using the enhanced pattern
             match = re.search(style_pattern, value, re.IGNORECASE)
             if match:
-                # Extract the number and return in "{number} Inch" format
-                number = match.group(1)
-                return f"{number} Inch"
-            
-            # Match using the second pattern (with quotes like 5'' or 5"")
-            match = re.search(style_pattern_with_quote, value, re.IGNORECASE)
-            if match:
-                # Extract the number and return in "{number} Inch" format
-                number = match.group(1)
-                return f"{number} Inch"
-            # Match using the second pattern (with quotes like 5'' or 5"")
-            match = re.search(style_pattern_without_space, value, re.IGNORECASE)
-            if match:
-                # Extract the number and return in "{number} Inch" format
-                number = match.group(1)
-                return f"{number} Inch"
-            
+                # Convert to float to handle decimals
+                number = float(match.group(1))
+                # Return as integer if it has no fractional part, otherwise return as float
+                if number.is_integer():
+                    return f"{int(number)} Inch"
+                else:
+                    return f"{number} Inch"
         return value  # Return the original value if it doesn't match any pattern
 
     # Function to rename and normalize 'Product Details' keys
@@ -393,93 +380,76 @@ def load_and_preprocess_data(s3_folder):
             # Rename keys based on mapping and normalize the 'Style' value if it exists
             renamed_details = {details_key_rename_map.get(key, key): value for key, value in details.items()}
             
+            if 'Size' not in renamed_details:
+                renamed_details['Size'] = None
+            if 'Style' not in renamed_details:
+                renamed_details['Style'] = None
+
             # Normalize 'Style' if present in the renamed details
             if 'Style' in renamed_details:
                 renamed_details['Style'] = normalize_style(renamed_details['Style'])
-                
             return renamed_details
         return details
 
     # Step 1: Apply renaming and normalization function to 'Product Details'
     merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(rename_and_normalize_product_details)
-
-    # Debug output to check the results after renaming and normalizing
-    st.write("After renaming and normalizing keys in 'Product Details':")
-    for idx, details in enumerate(merged_data_df['Product Details'].head(10)):
-        st.write(f"Row {idx} - Keys: {list(details.keys())}, Values: {details}")
-
-    # Step 2: Extract 'Size' and 'Style' from 'Product Details' if they exist
-    def extract_existing_size_style(details):
-        if isinstance(details, dict):
-            size = details.get('Size')  # Extract Size if it exists
-            style = details.get('Style')  # Extract normalized Style if it exists
-            return size, style
-        return None, None
-
-    # Populate 'Size' and 'Style' columns with existing values from 'Product Details'
-    merged_data_df[['Size', 'Style']] = merged_data_df['Product Details'].apply(lambda details: pd.Series(extract_existing_size_style(details)))
-
-    # Step 3: Apply extraction functions from 'product_title' only if 'Size' or 'Style' is missing
-    merged_data_df['Size'] = merged_data_df['Size'].fillna(merged_data_df['product_title'].apply(extract_size))
-    merged_data_df['Style'] = merged_data_df['Style'].fillna(merged_data_df['product_title'].apply(extract_style))
-
-    # Debug output to check the extracted 'Style' and 'Size'
-    st.write("After checking 'Product Details' and extracting missing 'Style' and 'Size' from 'product_title':")
-    st.write(merged_data_df[['asin', 'Style', 'Size']].head(10))
-
-    # # Step 2: Rename specific keys within 'Product Details' dictionary
-    # def rename_product_details_keys(details):
-    #     if isinstance(details, dict):
-    #         renamed_details = {details_key_rename_map.get(key, key): value for key, value in details.items()}
-    #         return renamed_details
-    #     return details
-
-    # merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(rename_product_details_keys)
-    # st.write("After renaming keys in 'Product Details':")
-    # for idx, details in enumerate(merged_data_df['Product Details'].head(10)):
-    #     st.write(f"Row {idx} - Keys: {list(details.keys())} if dict else Type: {type(details)}")
     
-    # merged_data_df['Style'] = merged_data_df['product_title'].apply(extract_style)
-    # merged_data_df['Size'] = merged_data_df['product_title'].apply(extract_size)
-    # st.write("Extracted 'Style' and 'Size' from 'product_title':")
-    # st.write(merged_data_df[['asin', 'Style', 'Size']].head(10))
+    unique_products_df = merged_data_df.drop_duplicates(subset='asin').copy()
+    # Prepare verification_df with necessary columns
+    verification_df = unique_products_df[['asin', 'product_title', 'Product Details']].copy()
+    verification_df['Size'] = unique_products_df['Product Details'].apply(lambda details: details.get('Size', None))
+    verification_df['Style'] = unique_products_df['Product Details'].apply(lambda details: details.get('Style', None))
 
+    # Fill missing values using `product_title`
+    verification_df['Size'] = verification_df.apply(lambda row: extract_size(row['product_title']) if pd.isna(row['Size']) else row['Size'], axis=1)
+    verification_df['Style'] = verification_df.apply(lambda row: extract_style(row['product_title']) if pd.isna(row['Style']) else row['Style'], axis=1)
+
+    verification_df['Product Dimensions'] = verification_df['Product Details'].apply(lambda details: details.get('Product Dimensions', None))
+
+    def extract_style_from_dimensions(dimensions):
+        if isinstance(dimensions, str):
+            dimension_match = re.search(r'(\d+(?:\.\d+)?)\s*Inches$', dimensions)
+            if dimension_match:
+                number = float(dimension_match.group(1))
+                return f"{int(number)} Inch" if number.is_integer() else f"{number} Inch"
+        return None
+
+    verification_df['Style'] = verification_df.apply(
+        lambda row: extract_style_from_dimensions(row['Product Dimensions']) if pd.isna(row['Style']) else row['Style'], axis=1)
+
+    def standardize_style_format(style_value):
+        if isinstance(style_value, str):
+            match = re.search(r'(\d+(?:\.\d+)?)', style_value)
+            if match:
+                number = match.group(1)
+                return f"{number} Inch"
+        return style_value
+
+    verification_df['Style'] = verification_df['Style'].apply(standardize_style_format)
+
+    # Update merged_data_df with final Size and Style
+    merged_data_df = merged_data_df.merge(
+    verification_df[['asin', 'Size', 'Style']],
+    on='asin',
+    how='left'
+    )
+    
+    print("Columns after merge:", merged_data_df.columns)
+    
     def update_product_details(row):
         details = row['Product Details']
         if isinstance(details, dict):
-            details['Style'] = row['Style']
             details['Size'] = row['Size']
+            details['Style'] = row['Style']
         return details
 
     merged_data_df['Product Details'] = merged_data_df.apply(update_product_details, axis=1)
-    st.write("Final 'Product Details' after adding 'Style' and 'Size':")
-    for idx, details in enumerate(merged_data_df['Product Details'].head(10)):
-        st.write(f"Row {idx} - Product Details: {details}")
+    merged_data_df.drop(columns=['Size', 'Style'], inplace=True)
 
-    def extract_dimensions(details):
-        # Check if 'Product Dimensions' exists in the dictionary
-        if isinstance(details, dict):
-            return details.get('Product Dimensions', None)
-        return None
+    # merged_data_df.to_csv('product_details_verification_final_standardized.csv', index=False)
+    # print("Final CSV with standardized Style values saved as product_details_verification_final_standardized.csv.")
 
-    # Create a new column 'Product Dimensions' by extracting from 'Product Details'
-    merged_data_df['Product Dimensions'] = merged_data_df['Product Details'].apply(extract_dimensions)
-
-    reference_df = pd.read_csv('product_dimension_size_style_reference.csv')
-
-    merged_data_df = pd.merge(merged_data_df, reference_df, on='Product Dimensions', how='left', suffixes=('', '_ref'))
-
-    # Fill missing values in 'Size' and 'Style' columns with the values from the reference DataFrame
-    merged_data_df['Size'] = merged_data_df['Size'].fillna(merged_data_df['Size_ref'])
-    merged_data_df['Style'] = merged_data_df['Style'].fillna(merged_data_df['Style_ref'])
-    # Debugging statement to check if missing 'Size' and 'Style' values were filled correctly
-    st.write("After filling missing 'Size' and 'Style' with reference data:")
-    st.write(merged_data_df[['asin', 'Size', 'Style', 'Size_ref', 'Style_ref']].head(10))
-
-    # Extract `asin` and `keyword` columns to create asin_keyword_df
     asin_keyword_df = merged_data_df[['asin', 'keyword']].copy()
-    st.dataframe(asin_keyword_df)
-        
     return asin_keyword_df, merged_data_df
 
 asin_keyword_df, merged_data_df = load_and_preprocess_data(s3_folder)

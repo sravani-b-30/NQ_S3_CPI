@@ -335,10 +335,10 @@ def load_and_preprocess_data(s3_folder):
     # Convert 'Product Details' from string to dictionary
     merged_data_df['Product Details'] = merged_data_df['Product Details'].apply(parse_dict_str).apply(list_to_dict)
 
-    # Display the type and sample values of 'Product Details' to understand its format
-    st.write("Inspecting 'Product Details' format for the first few rows in the raw data:")
-    for idx, details in enumerate(merged_data_df['Product Details'].head(10)):
-        st.write(f"Row {idx} - Type: {type(details)}, Value: {details}")
+    # # Display the type and sample values of 'Product Details' to understand its format
+    # st.write("Inspecting 'Product Details' format for the first few rows in the raw data:")
+    # for idx, details in enumerate(merged_data_df['Product Details'].head(10)):
+    #     st.write(f"Row {idx} - Type: {type(details)}, Value: {details}")
 
     def fill_missing_brand(df):
         # Fill 'brand' from 'Product Details' dictionary's 'Brand' key, if it exists
@@ -567,9 +567,9 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
         if row['asin'] == asin:
             continue
         compare_brand = row['brand']
-        if same_brand_option == 'only' and compare_brand != target_brand:
+        if same_brand_option == 'Include Brand Products' and compare_brand != target_brand:
             continue
-        if same_brand_option == 'omit' and compare_brand == target_brand:
+        if same_brand_option == 'Exclude Brand Products' and compare_brand == target_brand:
             continue
         if price_min <= row['price'] <= price_max:
             compare_details = {**row['Product Details']}
@@ -1276,14 +1276,14 @@ def clear_session_state_on_date_change():
             st.session_state['prev_end_date'] = end_date
 
 # Streamlit UI for ASIN Competitor Analysis
-st.title("ASIN Competitor Analysis")
+st.title("Walmart Competitor Analysis")
 
 # Create columns to use horizontal space
 col1, col2, col3 = st.columns(3)
 
 # Input fields for ASIN and price range
 with col1:
-    asin = st.text_input("Enter ASIN").upper()
+    asin = st.text_input("Enter Item ID").upper()
 
 with col2:
     price_min = st.number_input("Price Min", value=0.00)
@@ -1292,7 +1292,7 @@ with col3:
     price_max = st.number_input("Price Max", value=0.00)
 
 # Target price input
-target_price = st.number_input("Target Price", value=0.00)
+target_price = st.number_input("Product Price", value=0.00)
 
 generate_csv_option = st.checkbox("Generate CSV file for download", value=True)
 
@@ -1320,7 +1320,7 @@ selected_ax4_column = st.selectbox(
 clear_session_state_on_date_change()
 
 # Radio buttons for same brand option
-same_brand_option = st.radio("Same Brand Option", ('all', 'only', 'omit'))
+same_brand_option = st.radio("Same Brand Option", ('all', 'Include Brand Products', 'Exclude Brand Products'))
 
 # Initialize session state for button click tracking
 if 'show_features_clicked' not in st.session_state:

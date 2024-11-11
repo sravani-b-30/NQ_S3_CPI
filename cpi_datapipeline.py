@@ -763,7 +763,7 @@ def save_df_to_s3(df, bucket_name, s3_folder, file_name):
     :param aws_secret_access_key: AWS secret access key for authentication.
     """
     # Create a session with AWS
-    session = boto3.Session
+    session = boto3.Session()
 
     # Create an S3 client
     s3_client = session.client('s3')
@@ -957,9 +957,7 @@ def query_and_save_to_s3(brand, aws_access_key_id, aws_secret_access_key):
         df=df1,
         bucket_name='anarix-cpi',
         s3_folder=f'{brand}/',
-        file_name=file_name_,
-        aws_access_key_id=aws_access_key_id,
-        aws_secret_access_key=aws_secret_access_key
+        file_name=file_name_
     )
     
     logger.info(f"Data for {brand} successfully queried and saved to S3 as {file_name}")

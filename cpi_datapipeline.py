@@ -495,7 +495,7 @@ def fetch_and_merge_product_data(df):
     logger.info("Process 3: Product Price Data fetched and files saved to S3")
     return merged_df
 
-def save_to_s3(df, brand, file_name, aws_access_key_id, aws_secret_access_key):
+def save_to_s3(df, brand, file_name):
     """
     Saves a DataFrame as a CSV file to S3 in the specified brand folder.
 
@@ -511,8 +511,6 @@ def save_to_s3(df, brand, file_name, aws_access_key_id, aws_secret_access_key):
     # Initialize the S3 client
     s3_client = boto3.client(
         's3',
-        aws_access_key_id=aws_access_key_id,
-        aws_secret_access_key=aws_secret_access_key
     )
 
     # Convert DataFrame to CSV in-memory
@@ -753,7 +751,7 @@ import pandas as pd
 from io import StringIO
 
 
-def save_df_to_s3(df, bucket_name, s3_folder, file_name, aws_access_key_id, aws_secret_access_key):
+def save_df_to_s3(df, bucket_name, s3_folder, file_name):
     """
     Saves a DataFrame to an S3 bucket as a CSV file.
 
@@ -765,10 +763,7 @@ def save_df_to_s3(df, bucket_name, s3_folder, file_name, aws_access_key_id, aws_
     :param aws_secret_access_key: AWS secret access key for authentication.
     """
     # Create a session with AWS
-    session = boto3.Session(
-        aws_access_key_id=aws_access_key_id,
-        aws_secret_access_key=aws_secret_access_key
-    )
+    session = boto3.Session
 
     # Create an S3 client
     s3_client = session.client('s3')

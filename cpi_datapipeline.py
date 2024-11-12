@@ -784,7 +784,7 @@ def save_df_to_s3(df, bucket_name, s3_folder, file_name):
 
     logger.info(f"DataFrame saved to S3: {bucket_name}/{s3_object_path}")
 
-def query_and_save_to_s3(brand, aws_access_key_id, aws_secret_access_key):
+def query_and_save_to_s3(brand):
     """
     Queries data from the database based on the brand and saves the result to S3.
     
@@ -1059,56 +1059,55 @@ if __name__ == '__main__':
     multiprocessing.freeze_support()
 
     # List of brands to process
-    brands = ["EUROPEAN_HOME_DESIGNS", "NAPQUEEN"]
+    brand =  "NAPQUEEN"
     
-    for brand in brands:
-        logger.info(f"Processing brand: {brand}")
+    logger.info(f"Processing brand: {brand}")
 
-        df = active_keyword_ids(brand)
-        df = fetch_keyword_ids(df)
+    df = active_keyword_ids(brand)
+    df = fetch_keyword_ids(df)
 
-        # #Step 2
-        df = fetch_serp_data(df)
+    # #Step 2
+    df = fetch_serp_data(df)
 
-        # #Step 3
-        df = fetch_and_merge_product_data(df)
+    # #Step 3
+    df = fetch_and_merge_product_data(df)
 
-        #Step 4
-        df_price_tracker = fetch_price_tracker_data(marketplace="Amazon", days=60)
+    #Step 4
+    df_price_tracker = fetch_price_tracker_data(marketplace="Amazon", days=60)
 
-        #Step 5
-        df = process_asin_price_data(df, days=30)
-        multiprocessing.freeze_support()
-        #Step 6
+    #Step 5
+    df = process_asin_price_data(df, days=30)
+    multiprocessing.freeze_support()
+    #Step 6
 
-        df = merge_and_clean_data(df,df_price_tracker)
-        # Save intermediate CSV locally (optional for debugging)
-        intermediate_file = f"/tmp/{brand}_testing.csv"
-        df.to_csv(intermediate_file, index=False)
+    df = merge_and_clean_data(df,df_price_tracker)
+    # Save intermediate CSV locally (optional for debugging)
+    intermediate_file = f"/tmp/{brand}_testing.csv"
+    df.to_csv(intermediate_file, index=False)
 
-        #Step 7
-        file_path = f"/tmp/{brand}.csv"
-        scrapper_handler(df,file_path)
-        df_scrapped_info = pd.read_csv("NAPQUEEN.csv",on_bad_lines='skip')
-        df = product_details_merge_data(df, df_scrapped_info)
+    #Step 7
+    file_path = f"/tmp/{brand}.csv"
+    scrapper_handler(df,file_path)
+    df_scrapped_info = pd.read_csv("NAPQUEEN.csv",on_bad_lines='skip')
+    df = product_details_merge_data(df, df_scrapped_info)
 
-        # Example usage:
-        today_date = datetime.now().strftime('%Y-%m-%d')
-        file_name = f'merged_data_{today_date}.csv'
+    # Example usage:
+    today_date = datetime.now().strftime('%Y-%m-%d')
+    file_name = f'merged_data_{today_date}.csv'
 
-        #df.to_csv(file_name,index=False)
-        
-        save_df_to_s3(
-            df=df,
-            bucket_name='anarix-cpi',
-            s3_folder=f'{brand}/',
-            file_name=file_name
-        )
-        
-        # Run query and save to S3 for the brand
-        query_and_save_to_s3(brand=brand)
-        
-        logger.info(f"Completed processing for brand: {brand}\n")
-        
+    #df.to_csv(file_name,index=False)
+    
+    save_df_to_s3(
+        df=df,
+        bucket_name='anarix-cpi',
+        s3_folder=f'{brand}/',
+        file_name=file_name
+    )
+    
+    # Run query and save to S3 for the brand
+    query_and_save_to_s3(brand=brand)
+    
+    logger.info(f"Completed processing for brand: {brand}\n")
+    
 
-        
+    

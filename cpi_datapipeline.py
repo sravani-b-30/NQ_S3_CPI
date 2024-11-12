@@ -341,8 +341,8 @@ def fetch_serp_data(updated_df):
     dataframes = []
     # Function to fetch data for a given date range (1 week at a time)
     def fetch_data_for_range(start, end):
-        print("start date: "+ str(start))
-        print("end date: " + str(end))
+        logger.info("start date: "+ str(start))
+        logger.info("end date: " + str(end))
         query_serp = f"""
             SELECT product_id, sale_price, scrapped_at, keyword_id
             FROM serp.amazon_serp
@@ -367,7 +367,7 @@ def fetch_serp_data(updated_df):
         dataframes.append(week_df)
 
         # Move to the next chunk
-        print(current_start_date)
+        logger.info(current_start_date)
         current_start_date += timedelta(days=chunk_size)
     # Close the cursor and connection
     cursor.close()

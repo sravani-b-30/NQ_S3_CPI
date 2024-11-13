@@ -590,8 +590,48 @@ def fetch_price_tracker_data(marketplace, days=60):
         s3_folder=s3_folder,
         file_name=file_name_,
     )
+    
+    df.rename(columns={'product_ID': 'asin'}, inplace=True)
+    price_tracker_df = df[['asin', 'listingPrice', 'Date']]
 
-    return df
+    return price_tracker_df
+
+def replace_napqueen_prices(merged_df,price_tracker_df):
+    
+    napqueen_df = merged_df.copy()
+    napqueen_df.info()
+
+    # Step 1: Filter napqueen products from merged_df
+    napqueen_df = napqueen_df[napqueen_df['brand'] == 'napqueen']
+    napqueen_df.info()
+
+    price_tracker_df = price_tracker_df.sort_values(by='Date', ascending=False)
+    price_tracker_df = price_tracker_df.drop_duplicates(subset=['asin'], keep='first')
+ 
+    # Step 2: Merge napqueen_df with price_tracker_df on 'asin'
+    napqueen_df = pd.merge(napqueen_df, price_tracker_df[['asin', 'listingPrice']], on='asin', how='left')
+    napqueen_df.info()
+
+    # Step 3: Replace sale_price with listingPrice in napqueen_df where available
+    napqueen_df['sale_price'] = napqueen_df['listingPrice'].combine_first(napqueen_df['sale_price'])
+
+    # Step 4: Drop the listingPrice column as it's no longer needed in napqueen_df
+    napqueen_df.drop(columns=['listingPrice'], inplace=True)
+    napqueen_df.info()
+    # Step 5: Remove napqueen products from the original merged_df
+    merged_df = merged_df[merged_df['brand'] != 'napqueen']
+    logger.info(f"After removing napqueen products : ")
+    merged_df.info()
+
+    # Step 6: Append the updated napqueen_df back to merged_df
+    merged_df = pd.concat([merged_df, napqueen_df], ignore_index=True)
+    logger.info(f"After adding back napqueen products :" )
+    merged_df.info()
+
+    merged_df.to_csv('napqueen_prices.csv', index=False)
+    # Step 7: Return the final merged DataFrame with updated napqueen prices
+    return merged_df
+
 
 def save_pricetracker_df_to_s3(df, bucket_name, s3_folder, file_name):
     """
@@ -1074,7 +1114,7 @@ if __name__ == '__main__':
 
     #Step 4
     df_price_tracker = fetch_price_tracker_data(marketplace="Amazon", days=60)
-
+    df = replace_napqueen_prices(df, df_price_tracker)
     #Step 5
     df = process_asin_price_data(df, days=30)
     multiprocessing.freeze_support()

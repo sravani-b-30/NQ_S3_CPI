@@ -742,9 +742,10 @@ def merge_and_clean_data(df, df_price):
     # Ensure 'date' columns in both dataframes are in datetime format
     df['date'] = pd.to_datetime(df['date'])
     df_price['Date'] = pd.to_datetime(df_price['Date'])
+    df_price.rename(columns={'asin': 'product_ID'}, inplace=True)
 
-    # # Fill missing price values by forward and backward filling within 'asin' and 'date' groups
-    # df['price'] = df.groupby(['asin', 'date'])['price'].transform(lambda group: group.ffill().bfill())
+    # Fill missing price values by forward and backward filling within 'asin' and 'date' groups
+    df['price'] = df.groupby(['asin', 'date'])['price'].transform(lambda group: group.ffill().bfill())
 
     # Merge the two DataFrames on 'asin' and 'date' (using a left join)
     merged_df = pd.merge(

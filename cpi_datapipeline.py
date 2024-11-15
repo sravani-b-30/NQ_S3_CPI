@@ -613,7 +613,12 @@ def replace_napqueen_prices(merged_df,price_tracker_df):
     napqueen_df.info()
 
     # Step 3: Replace sale_price with listingPrice in napqueen_df where available
-    napqueen_df['sale_price'] = napqueen_df['listingPrice'].combine_first(napqueen_df['sale_price'])
+    #napqueen_df['sale_price'] = napqueen_df['listingPrice'].combine_first(napqueen_df['sale_price'])
+    napqueen_df['sale_price'] = np.where(
+        napqueen_df['listingPrice'].notna(),  # Condition: If listingPrice is not null
+        napqueen_df['listingPrice'],         # Replace with listingPrice
+        napqueen_df['sale_price']            # Otherwise, retain sale_price
+    )
 
     # Step 4: Drop the listingPrice column as it's no longer needed in napqueen_df
     napqueen_df.drop(columns=['listingPrice'], inplace=True)
@@ -697,11 +702,14 @@ def process_asin_price_data(df, days=30):
 
         # Filter the DataFrame for the last 30 days
         last_30_days_df = df[(df['date'] <= analysis_date) & (df['date'] > start_date)]
+        
+        # Sort the DataFrame by ASIN and date (descending order)
+        last_30_days_df = last_30_days_df.sort_values(by=['asin', 'date'], ascending=[True, False])
 
         # Get unique ASINs and their corresponding latest prices and other details
         unique_asins = last_30_days_df.groupby('asin').agg({
             'title': 'first',
-            'sale_price': 'last',
+            'sale_price': 'first',
             'brand': 'first',
             'latest_rating_count': 'first',
             'latest_stars': 'first',
@@ -1127,9 +1135,20 @@ if __name__ == '__main__':
     df.to_csv(intermediate_file, index=False)
 
     #Step 7
-    file_path = f"/tmp/{brand}.csv"
+    file_path = "NAPQUEEN.csv"
     scrapper_handler(df,file_path)
-    df_scrapped_info = pd.read_csv("NAPQUEEN.csv",on_bad_lines='skip')
+
+    # Save the updated NAPQUEEN.csv to S3
+    save_df_to_s3(
+        df=pd.read_csv(file_path, on_bad_lines='skip'),  # Load the updated file into a DataFrame
+        bucket_name='anarix-cpi',
+        s3_folder=f'{brand}/',
+        file_name='NAPQUEEN.csv'
+    )
+
+    logger.info(f"Uploaded {file_path} to S3 bucket 'anarix-cpi' in folder '{brand}/'")
+
+    df_scrapped_info = pd.read_csv(file_path ,on_bad_lines='skip')
     df = product_details_merge_data(df, df_scrapped_info)
 
     # Example usage:

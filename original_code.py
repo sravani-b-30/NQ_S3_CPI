@@ -383,7 +383,27 @@ def load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix):
         
     return asin_keyword_df, keyword_id_df, merged_data_df, price_data_df
 
-asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix)
+def should_refresh_data(last_refresh_time):
+    """Checks if the data needs to be refreshed based on the current date."""
+    today = datetime.date.today()
+    return last_refresh_time.date() != today
+
+# Streamlit App
+if "last_refresh_time" not in st.session_state:
+    st.session_state.last_refresh_time = datetime.datetime.min  # Default to a very old date
+
+if should_refresh_data(st.session_state.last_refresh_time):
+    # Fetch the latest data and update the timestamp
+    with st.spinner("Refreshing data..."):
+        asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix)
+    st.session_state.last_refresh_time = datetime.datetime.now()
+else:
+    # Use cached data
+    asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix)
+
+st.write("Data last refreshed on:", st.session_state.last_refresh_time)
+
+#asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix)
 
 # Use session state to store the DataFrame and ensure it's available across sessions
 if 'show_features_df' not in st.session_state:

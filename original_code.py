@@ -394,18 +394,18 @@ def should_refresh_data(last_refresh_time):
 
 # Streamlit App
 if "last_refresh_time" not in st.session_state:
-    st.session_state.last_refresh_time = datetime.datetime.min  # Default to a very old date
+    st.session_state.last_refresh_time = datetime.min  # Default to a very old date
 
 def get_data(s3_folder, static_file_name, price_data_prefix, refresh=False):
     """Handles data fetching with daily refresh logic."""
     if "last_refresh_time" not in st.session_state:
         # Initialize refresh time to an old date
-        st.session_state.last_refresh_time = datetime.datetime.min
+        st.session_state.last_refresh_time = datetime.min
     
     if refresh:
         # Clear the cache and force a refresh
         clear_cache()
-        st.session_state.last_refresh_time = datetime.datetime.now()
+        st.session_state.last_refresh_time = datetime.now()
 
     # Check if data needs refreshing (e.g., it's a new day)
     if should_refresh_data(st.session_state.last_refresh_time):

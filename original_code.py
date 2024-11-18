@@ -414,7 +414,7 @@ def get_data(s3_folder, static_file_name, price_data_prefix, refresh=False):
                 s3_folder, static_file_name, price_data_prefix
             )
             # Update the last refresh time
-            st.session_state.last_refresh_time = datetime.datetime.now()
+            st.session_state.last_refresh_time = datetime.now()
     else:
         # Use cached data
         asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = load_and_preprocess_data(

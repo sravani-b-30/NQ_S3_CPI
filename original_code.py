@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 import streamlit as st 
 import boto3
-from datetime import datetime
+from datetime import datetime , date
 import dask.dataframe as dd
 from dask import delayed
 import io
@@ -389,7 +389,7 @@ def clear_cache():
 
 def should_refresh_data(last_refresh_time):
     """Checks if the data needs to be refreshed based on the current date."""
-    today = datetime.date.today()
+    today = date.today()
     return last_refresh_time.date() != today
 
 # Streamlit App

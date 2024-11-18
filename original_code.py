@@ -736,27 +736,51 @@ bucket_name = 'anarix-cpi'
 csv_folder = 'NAPQUEEN/' 
 
 # Function to generate the competitor data CSV and upload it to S3
-def upload_competitor_data_to_s3(competitors_data, asin):
-    # Generate CSV content
-    output = io.StringIO()
-    writer = csv.DictWriter(output, fieldnames=["ASIN", "Title", "Price", "Product Dimension", "Brand", "Matching Features"])
-    writer.writeheader()
-    writer.writerows(competitors_data)
-    csv_content = output.getvalue().encode('utf-8')
+# def upload_competitor_data_to_s3(competitors_data, asin):
+#     # Generate CSV content
+#     output = io.StringIO()
+#     writer = csv.DictWriter(output, fieldnames=["ASIN", "Title", "Price", "Product Dimension", "Brand", "Matching Features"])
+#     writer.writeheader()
+#     writer.writerows(competitors_data)
+#     csv_content = output.getvalue().encode('utf-8')
 
-    # Define the S3 key (file name) for the CSV
-    s3_key = f"{csv_folder}competitors_analysis_{asin}.csv"
+#     # Define the S3 key (file name) for the CSV
+#     s3_key = f"{csv_folder}competitors_analysis_{asin}.csv"
     
+#     # Upload the CSV to S3
+#     s3_client.put_object(Bucket=bucket_name, Key=s3_key, Body=csv_content, ContentType='text/csv')
+
+#     # Generate a presigned URL for downloading the file
+#     presigned_url = s3_client.generate_presigned_url('get_object',
+#         Params={'Bucket': bucket_name, 'Key': s3_key},
+#         ExpiresIn=3600  # URL expires in 1 hour
+#     )
+    
+#     return presigned_url
+
+def upload_competitor_data_to_s3(csv_content, s3_key):
+    """
+    Uploads a CSV file to S3 and generates a presigned URL for it.
+
+    Parameters:
+        csv_content (bytes): The CSV file content as bytes.
+        s3_key (str): The S3 key (file name) under which the file should be stored.
+
+    Returns:
+        str: The presigned URL for the uploaded file.
+    """
     # Upload the CSV to S3
     s3_client.put_object(Bucket=bucket_name, Key=s3_key, Body=csv_content, ContentType='text/csv')
 
     # Generate a presigned URL for downloading the file
-    presigned_url = s3_client.generate_presigned_url('get_object',
+    presigned_url = s3_client.generate_presigned_url(
+        'get_object',
         Params={'Bucket': bucket_name, 'Key': s3_key},
         ExpiresIn=3600  # URL expires in 1 hour
     )
     
     return presigned_url
+
 
 def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, merged_data_df, compulsory_keywords, non_compulsory_keywords, generate_csv=False):
     
@@ -869,13 +893,23 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     st.subheader("Product Comparison Details")
     st.write(f"**Competitor Count**: {competitor_count}")
     st.write(f"**Number of Competitors with Null Price**: {price_null_count}")
+    
+    # Generate CSV content
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=["ASIN", "Title", "Price", "Product Dimension", "Brand", "Matching Features"])
+    writer.writeheader()
+    writer.writerows(competitors_data)
+    csv_content = output.getvalue().encode('utf-8')
+
+    # Define the S3 key (file name)
+    s3_key = f"{csv_folder}competitors_analysis_{asin}.csv"
 
     # Store competitors data in session state
     st.session_state['competitors_data'] = competitors_data
 
     # If user requested a CSV, upload it to S3 and provide the download link
     if generate_csv:
-        download_link = upload_competitor_data_to_s3(competitors_data, asin)
+        download_link = upload_competitor_data_to_s3(csv_content, s3_key)
         st.session_state['csv_download_link'] = download_link
 
     # Display CSV download link if available
@@ -1019,10 +1053,24 @@ def calculate_and_plot_cpi(merged_data_df, price_data_df, asin_list, start_date,
             current_date += timedelta(days=1)
             
             # Save the combined competitor details DataFrame as a single CSV if it has data
-        if not combined_competitor_df.empty:
-            combined_csv_filename = f"combined_competitors_{asin}_{start_date}_{end_date}.csv"
-            combined_competitor_df.to_csv(combined_csv_filename, index=False)
-            st.session_state['competitor_files']['combined'] = combined_csv_filename
+        # if not combined_competitor_df.empty:
+        #     combined_csv_filename = f"combined_competitors_{asin}_{start_date}_{end_date}.csv"
+        #     combined_competitor_df.to_csv(combined_csv_filename, index=False)
+        #     st.session_state['competitor_files']['combined'] = combined_csv_filename
+        # Save the combined competitor details DataFrame to S3 and generate presigned URL
+            if not combined_competitor_df.empty:
+                # Generate CSV content from DataFrame
+                csv_content = combined_competitor_df.to_csv(index=False).encode('utf-8')
+
+                # Define the S3 key
+                s3_key = f"NAPQUEEN/combined_competitors_{asin}_{start_date}_{end_date}.csv"
+
+                # Upload CSV to S3 and get presigned URL
+                presigned_url = upload_competitor_data_to_s3(csv_content, s3_key)
+
+                st.session_state['csv_download_link'] = presigned_url
+            else:
+                st.error("No competitor data available for the selected date range.")
 
             # Create result DataFrame and store in session state
             result_df = pd.DataFrame(all_results,
@@ -1073,18 +1121,29 @@ def calculate_and_plot_cpi(merged_data_df, price_data_df, asin_list, start_date,
     st.subheader("Time-Series Analysis Results")
     plot_results(result_df, asin_list, start_date, end_date, selected_ax4_column)
 
+    # if not combined_competitor_df.empty:
+    #     st.subheader("Combined Competitor Data for Selected Date Range")
+    #     st.dataframe(combined_competitor_df)
+
+    #     # Download button for the combined CSV
+    #     with open(combined_csv_filename, 'rb') as file:
+    #         st.download_button(
+    #             label=f"Download Combined Competitor Details for {asin}",
+    #             data=file,
+    #             file_name=combined_csv_filename,
+    #             mime='text/csv'
+    #         )
+    # else:
+    #     st.write("No competitor data available for the selected date range.")
+    # Display the combined competitor data if it exists
+
     if not combined_competitor_df.empty:
         st.subheader("Combined Competitor Data for Selected Date Range")
         st.dataframe(combined_competitor_df)
 
-        # Download button for the combined CSV
-        with open(combined_csv_filename, 'rb') as file:
-            st.download_button(
-                label=f"Download Combined Competitor Details for {asin}",
-                data=file,
-                file_name=combined_csv_filename,
-                mime='text/csv'
-            )
+        # Display the download link for the combined CSV
+        if 'csv_download_link' in st.session_state:
+            st.markdown(f"[Download Combined Competitor Details CSV]({st.session_state['csv_download_link']})")
     else:
         st.write("No competitor data available for the selected date range.")
 

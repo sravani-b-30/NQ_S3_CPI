@@ -334,7 +334,7 @@ def fetch_serp_data(updated_df):
     cursor = conn.cursor()
     # Define the date range
     end_date = datetime.now().date() + timedelta(days=1)
-    start_date = end_date - timedelta(days=60)
+    start_date = end_date - timedelta(days=90)
     logger.info(f"Fetching SERP data from {start_date} to {end_date}")
 
     # Initialize an empty list to collect dataframes
@@ -525,7 +525,7 @@ def save_to_s3(df, brand, file_name):
     except Exception as e:
         logger.error(f"Failed to save {file_name} to S3: {e}")
 
-def fetch_price_tracker_data(marketplace, days=60):
+def fetch_price_tracker_data(marketplace, days=90):
     """
     This function fetches price tracking data for a given marketplace from the last `days` days,
     loads it into a DataFrame, and saves the result as a CSV file.
@@ -676,7 +676,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 
-def process_asin_price_data(df, days=30):
+def process_asin_price_data(df, days=60):
     """
     Processes the ASIN price data for the last 'days' days and saves the result to a CSV file.
 
@@ -1122,10 +1122,10 @@ if __name__ == '__main__':
     df = fetch_and_merge_product_data(df)
 
     #Step 4
-    df_price_tracker = fetch_price_tracker_data(marketplace="Amazon", days=60)
+    df_price_tracker = fetch_price_tracker_data(marketplace="Amazon", days=90)
     df = replace_napqueen_prices(df, df_price_tracker)
     #Step 5
-    df = process_asin_price_data(df, days=30)
+    df = process_asin_price_data(df, days=60)
     multiprocessing.freeze_support()
     #Step 6
 

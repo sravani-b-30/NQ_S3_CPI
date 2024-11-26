@@ -1133,6 +1133,14 @@ if __name__ == '__main__':
     # Save intermediate CSV locally (optional for debugging)
     intermediate_file = f"/tmp/{brand}_testing.csv"
     df.to_csv(intermediate_file, index=False)
+    today_date = datetime.now().strftime('%Y-%m-%d')
+    file_name = f"serp_data_{today_date}.csv"
+    save_df_to_s3(
+        df=df,
+        bucket_name='anarix-cpi',
+        s3_folder=f'{brand}/',
+        file_name=file_name
+    )
 
     #Step 7
     file_path = "NAPQUEEN.csv"

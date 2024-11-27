@@ -383,67 +383,110 @@ def load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix):
         
     return asin_keyword_df, keyword_id_df, merged_data_df, price_data_df
 
+# def clear_cache():
+#     """Clears the cache for load_and_preprocess_data."""
+#     st.cache_resource.clear()
+
+# def should_refresh_data(last_refresh_time):
+#     """Checks if the data needs to be refreshed based on the current date."""
+#     today = date.today()
+#     return last_refresh_time.date() != today
+
+# # Streamlit App
+# if "last_refresh_time" not in st.session_state:
+#     st.session_state.last_refresh_time = datetime.min  # Default to a very old date
+
+# def get_data(s3_folder, static_file_name, price_data_prefix, refresh=False):
+#     """Handles data fetching with daily refresh logic."""
+#     if "last_refresh_time" not in st.session_state:
+#         # Initialize refresh time to an old date
+#         st.session_state.last_refresh_time = datetime.min
+    
+#     if refresh:
+#         # Clear the cache and force a refresh
+#         clear_cache()
+#         st.session_state.last_refresh_time = datetime.now()
+
+#     # Check if data needs refreshing (e.g., it's a new day)
+#     if should_refresh_data(st.session_state.last_refresh_time):
+#         with st.spinner("Refreshing data..."):
+#             asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = load_and_preprocess_data(
+#                 s3_folder, static_file_name, price_data_prefix
+#             )
+#             # Update the last refresh time
+#             st.session_state.last_refresh_time = datetime.now()
+#     else:
+#         # Use cached data
+#         asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = load_and_preprocess_data(
+#             s3_folder, static_file_name, price_data_prefix
+#         )
+
+#     return asin_keyword_df, keyword_id_df, merged_data_df, price_data_df
+
+# asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = get_data(
+#     s3_folder, static_file_name, price_data_prefix
+# )
+
+# # Manual refresh button
+# if st.button("Refresh Data"):
+#     with st.spinner("Refreshing data..."):
+#         asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = get_data(
+#             s3_folder, static_file_name, price_data_prefix, refresh=True
+#         )
+#     st.success("Data refreshed successfully!")
+
+# # Display the last refresh time
+# st.write("Data last refreshed on:", st.session_state.last_refresh_time)
+
+# #asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix)
+
+# # Use session state to store the DataFrame and ensure it's available across sessions
+# if 'show_features_df' not in st.session_state:
+#     # Load the data (this will be cached using st.cache_data)
+#     _, _, merged_data_df, _  = get_data(s3_folder, static_file_name, price_data_prefix)
+#     st.session_state['show_features_df'] = merged_data_df
+# else:
+#     merged_data_df = st.session_state['show_features_df']
+
 def clear_cache():
     """Clears the cache for load_and_preprocess_data."""
-    st.cache_resource.clear()
-
-def should_refresh_data(last_refresh_time):
-    """Checks if the data needs to be refreshed based on the current date."""
-    today = date.today()
-    return last_refresh_time.date() != today
-
-# Streamlit App
-if "last_refresh_time" not in st.session_state:
-    st.session_state.last_refresh_time = datetime.min  # Default to a very old date
+    load_and_preprocess_data.clear()  # Clears the cache for this function
 
 def get_data(s3_folder, static_file_name, price_data_prefix, refresh=False):
     """Handles data fetching with daily refresh logic."""
-    if "last_refresh_time" not in st.session_state:
-        # Initialize refresh time to an old date
-        st.session_state.last_refresh_time = datetime.min
-    
     if refresh:
-        # Clear the cache and force a refresh
+        # Clear cache and fetch fresh data
         clear_cache()
         st.session_state.last_refresh_time = datetime.now()
-
-    # Check if data needs refreshing (e.g., it's a new day)
-    if should_refresh_data(st.session_state.last_refresh_time):
-        with st.spinner("Refreshing data..."):
-            asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = load_and_preprocess_data(
-                s3_folder, static_file_name, price_data_prefix
-            )
-            # Update the last refresh time
-            st.session_state.last_refresh_time = datetime.now()
-    else:
-        # Use cached data
-        asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = load_and_preprocess_data(
-            s3_folder, static_file_name, price_data_prefix
-        )
-
+    
+    # Fetch the data (from cache or fresh)
+    asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = load_and_preprocess_data(
+        s3_folder, static_file_name, price_data_prefix
+    )
+    
     return asin_keyword_df, keyword_id_df, merged_data_df, price_data_df
 
-asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = get_data(
-    s3_folder, static_file_name, price_data_prefix
-)
+# Initialize last_refresh_time in session state
+if "last_refresh_time" not in st.session_state:
+    st.session_state.last_refresh_time = datetime.min  # Default to a very old date
 
-# Manual refresh button
+# Manual refresh button logic
 if st.button("Refresh Data"):
     with st.spinner("Refreshing data..."):
+        # Force a refresh
         asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = get_data(
             s3_folder, static_file_name, price_data_prefix, refresh=True
         )
+        # Update session state
+        st.session_state['show_features_df'] = merged_data_df
     st.success("Data refreshed successfully!")
 
-# Display the last refresh time
+# Display last refresh time
 st.write("Data last refreshed on:", st.session_state.last_refresh_time)
 
-#asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix)
-
-# Use session state to store the DataFrame and ensure it's available across sessions
+# Load cached data for session state
 if 'show_features_df' not in st.session_state:
-    # Load the data (this will be cached using st.cache_data)
-    _, _, merged_data_df, _  = get_data(s3_folder, static_file_name, price_data_prefix)
+    _, _, merged_data_df, _ = get_data(s3_folder, static_file_name, price_data_prefix)
     st.session_state['show_features_df'] = merged_data_df
 else:
     merged_data_df = st.session_state['show_features_df']

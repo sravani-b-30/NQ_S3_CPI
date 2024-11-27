@@ -463,23 +463,32 @@ def get_data(s3_folder, static_file_name, price_data_prefix, refresh=False):
     asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = load_and_preprocess_data(
         s3_folder, static_file_name, price_data_prefix
     )
-    
+
+    # Store dataframes in session state
+    st.session_state['asin_keyword_df'] = asin_keyword_df
+    st.session_state['keyword_id_df'] = keyword_id_df
+    st.session_state['merged_data_df'] = merged_data_df
+    st.session_state['price_data_df'] = price_data_df
+
     return asin_keyword_df, keyword_id_df, merged_data_df, price_data_df
 
-# Initialize last_refresh_time in session state
-if "last_refresh_time" not in st.session_state:
-    st.session_state.last_refresh_time = datetime.min  # Default to a very old date
+# Ensure data is loaded into session state during app initialization
+if 'asin_keyword_df' not in st.session_state:
+    # Load data initially
+    get_data(s3_folder, static_file_name, price_data_prefix)
 
 # Manual refresh button logic
 if st.button("Refresh Data"):
     with st.spinner("Refreshing data..."):
         # Force a refresh
-        asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = get_data(
-            s3_folder, static_file_name, price_data_prefix, refresh=True
-        )
-        # Update session state
-        st.session_state['show_features_df'] = merged_data_df
+        get_data(s3_folder, static_file_name, price_data_prefix, refresh=True)
     st.success("Data refreshed successfully!")
+
+# Access dataframes directly from session state
+asin_keyword_df = st.session_state['asin_keyword_df']
+keyword_id_df = st.session_state['keyword_id_df']
+merged_data_df = st.session_state['merged_data_df']
+price_data_df = st.session_state['price_data_df']
 
 # Display last refresh time
 st.write("Data last refreshed on:", st.session_state.last_refresh_time)

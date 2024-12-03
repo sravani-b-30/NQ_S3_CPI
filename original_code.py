@@ -324,7 +324,7 @@ def load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix):
     merged_data_df = dd.from_delayed([delayed(merged_data_delayed)])
     #st.write("Latest merged_data file name loaded:", merged_data_df.head())
 
-    merged_data_df = merged_data_df.rename(columns={"title": "product_title"})
+    merged_data_df = merged_data_df.rename(columns={"title": "product_title", "ASIN" : "asin"})
     merged_data_df['ASIN'] = merged_data_df['ASIN'].str.upper()
 
     def fill_missing_brand(df):

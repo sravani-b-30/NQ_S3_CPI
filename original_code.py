@@ -326,7 +326,6 @@ def load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix):
 
     merged_data_df = merged_data_df.rename(columns={"title": "product_title"})
     merged_data_df['ASIN'] = merged_data_df['ASIN'].str.upper()
-    merged_data_df = merged_data_df.drop_duplicates(subset='ASIN')
 
     def fill_missing_brand(df):
         missing_brand_mask = df['brand'].isna() | (df['brand'] == "")

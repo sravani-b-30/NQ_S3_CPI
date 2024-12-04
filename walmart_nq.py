@@ -450,7 +450,9 @@ def load_and_preprocess_data(s3_folder):
     # print("Final CSV with standardized Style values saved as product_details_verification_final_standardized.csv.")
 
     asin_keyword_df = merged_data_df[['asin', 'keyword']].copy()
-    asin_keyword_df = (asin_keyword_df.groupby('asin', as_index=False).agg({'keyword': lambda x: list(set(x))}))
+    asin_keyword_df = asin_keyword_df.drop_duplicates()
+    asin_keyword_df = asin_keyword_df.reset_index(drop=True , inplace=True)
+    # asin_keyword_df = (asin_keyword_df.groupby('asin', as_index=False).agg({'keyword': lambda x: list(set(x))}))
 
     return asin_keyword_df, merged_data_df
 

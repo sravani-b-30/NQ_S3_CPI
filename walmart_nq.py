@@ -798,28 +798,29 @@ s3_client = boto3.client('s3')
 bucket_name = 'anarix-cpi'
 csv_folder = 'WALMART/' 
 
-# Function to generate the competitor data CSV and upload it to S3
-def upload_competitor_data_to_s3(competitors_data, asin):
-    # Generate CSV content
-    output = io.StringIO()
-    writer = csv.DictWriter(output, fieldnames=["ASIN", "Title", "Price", "Product Dimension", "Brand", "Matching Features"])
-    writer.writeheader()
-    writer.writerows(competitors_data)
-    csv_content = output.getvalue().encode('utf-8')
+def upload_competitor_data_to_s3(csv_content, s3_key):
+    """
+    Uploads a CSV file to S3 and generates a presigned URL for it.
 
-    # Define the S3 key (file name) for the CSV
-    s3_key = f"{csv_folder}competitors_analysis_{asin}.csv"
-    
+    Parameters:
+        csv_content (bytes): The CSV file content as bytes.
+        s3_key (str): The S3 key (file name) under which the file should be stored.
+
+    Returns:
+        str: The presigned URL for the uploaded file.
+    """
     # Upload the CSV to S3
     s3_client.put_object(Bucket=bucket_name, Key=s3_key, Body=csv_content, ContentType='text/csv')
 
     # Generate a presigned URL for downloading the file
-    presigned_url = s3_client.generate_presigned_url('get_object',
+    presigned_url = s3_client.generate_presigned_url(
+        'get_object',
         Params={'Bucket': bucket_name, 'Key': s3_key},
         ExpiresIn=3600  # URL expires in 1 hour
     )
     
     return presigned_url
+
 
 def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, merged_data_df, compulsory_keywords, non_compulsory_keywords, generate_csv=False):
     
@@ -864,7 +865,7 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     # Prepare competitors data for CSV
     competitors_data = [
         {
-            "ASIN": product[0],
+            "ID": product[0],
             "Title": product[1],
             "Price": product[2],
             "Product Dimension": product[7].get('Product Dimensions', ''),
@@ -933,12 +934,22 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
     st.write(f"**Competitor Count**: {competitor_count}")
     st.write(f"**Number of Competitors with Null Price**: {price_null_count}")
 
+    # Generate CSV content
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=["ID", "Title", "Price", "Product Dimension", "Brand", "Matching Features"])
+    writer.writeheader()
+    writer.writerows(competitors_data)
+    csv_content = output.getvalue().encode('utf-8')
+
+    # Define the S3 key (file name)
+    s3_key = f"{csv_folder}competitors_analysis_{asin}.csv"
+
     # Store competitors data in session state
     st.session_state['competitors_data'] = competitors_data
 
     # If user requested a CSV, upload it to S3 and provide the download link
     if generate_csv:
-        download_link = upload_competitor_data_to_s3(competitors_data, asin)
+        download_link = upload_competitor_data_to_s3(csv_content, s3_key)
         st.session_state['csv_download_link'] = download_link
 
     # Display CSV download link if available

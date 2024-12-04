@@ -467,15 +467,60 @@ def load_and_preprocess_data(s3_folder):
 
     return asin_keyword_df, merged_data_df
 
-asin_keyword_df, merged_data_df = load_and_preprocess_data(s3_folder)
+def clear_cache():
+    """Clears the cache for load_and_preprocess_data."""
+    load_and_preprocess_data.clear()  # Clears the cache for this function
 
-# Use session state to store the DataFrame and ensure it's available across sessions
+def get_data(s3_folder, refresh=False):
+    """Handles data fetching with daily refresh logic."""
+    if refresh:
+        # Clear cache and fetch fresh data
+        clear_cache()
+        st.session_state.last_refresh_time = datetime.now()
+    
+    # Fetch the data (from cache or fresh)
+    asin_keyword_df, merged_data_df = load_and_preprocess_data(s3_folder)
+    
+    # Store dataframes in session state
+    st.session_state['asin_keyword_df'] = asin_keyword_df
+    st.session_state['merged_data_df'] = merged_data_df
+
+    return asin_keyword_df, merged_data_df
+
+# Ensure data is loaded into session state during app initialization
+if 'asin_keyword_df' not in st.session_state:
+    # Load data initially
+    get_data(s3_folder)
+
+# Initialize last_refresh_time in session state
+if "last_refresh_time" not in st.session_state:
+    st.session_state.last_refresh_time = datetime.min  # Default to a very old date
+
+# Manual refresh button logic
+if st.button("Refresh Data"):
+    with st.spinner("Refreshing data..."):
+        # Force a refresh
+        asin_keyword_df, merged_data_df = get_data(
+            s3_folder, refresh=True
+        )
+        # Update session state
+        st.session_state['show_features_df'] = merged_data_df
+    st.success("Data refreshed successfully!")
+
+# Access dataframes directly from session state
+asin_keyword_df = st.session_state['asin_keyword_df']
+merged_data_df = st.session_state['merged_data_df']
+
+# Display last refresh time
+st.write("Data last refreshed on:", st.session_state.last_refresh_time)
+
+# Load cached data for session state
 if 'show_features_df' not in st.session_state:
-    # Load the data (this will be cached using st.cache_data)
-    _, merged_data_df = load_and_preprocess_data(s3_folder)
+    _, _, merged_data_df, _ = get_data(s3_folder)
     st.session_state['show_features_df'] = merged_data_df
 else:
     merged_data_df = st.session_state['show_features_df']
+
 
 def check_compulsory_features_match(target_details, compare_details, compulsory_features):
 
@@ -1038,18 +1083,26 @@ def calculate_and_plot_cpi(merged_data_df, asin_list, start_date, end_date, pric
             
             # Save the combined competitor details DataFrame as a single CSV if it has data
         if not combined_competitor_df.empty:
-            combined_csv_filename = f"combined_competitors_{asin}_{start_date}_{end_date}.csv"
-            combined_competitor_df.to_csv(combined_csv_filename, index=False)
-            st.session_state['competitor_files']['combined'] = combined_csv_filename
+            # Generate CSV content from DataFrame
+            csv_content = combined_competitor_df.to_csv(index=False).encode('utf-8')
 
-            # Create result DataFrame and store in session state
-            result_df = pd.DataFrame(all_results,
-                                 columns=['Date', 'ASIN', 'Target Price', 'CPI Score', 'Number Of Competitors Found',
-                                          'Size', 'Product Dimension', 'Competitor Prices', 'Dynamic CPI'])
-            st.session_state['result_df'] = result_df
+            # Define the S3 key
+            s3_key = f"NAPQUEEN/combined_competitors_{asin}_{start_date}_{end_date}.csv"
+
+            # Upload CSV to S3 and get presigned URL
+            presigned_url = upload_competitor_data_to_s3(csv_content, s3_key)
+
+            st.session_state['csv_download_link'] = presigned_url
         else:
-            # Use the cached result if it exists
-            result_df = st.session_state['result_df']
+            st.error("No competitor data available for the selected date range.")
+            # Create result DataFrame and store in session state
+        result_df = pd.DataFrame(all_results,
+                                columns=['Date', 'ASIN', 'Target Price', 'CPI Score', 'Number Of Competitors Found',
+                                        'Size', 'Product Dimension', 'Competitor Prices', 'Dynamic CPI'])
+        st.session_state['result_df'] = result_df
+    else:
+        # Use the cached result if it exists
+        result_df = st.session_state['result_df']
 
     # Display the result dataframe in Streamlit
     st.subheader("Analysis Results")
@@ -1095,14 +1148,9 @@ def calculate_and_plot_cpi(merged_data_df, asin_list, start_date, end_date, pric
         st.subheader("Combined Competitor Data for Selected Date Range")
         st.dataframe(combined_competitor_df)
 
-        # Download button for the combined CSV
-        with open(combined_csv_filename, 'rb') as file:
-            st.download_button(
-                label=f"Download Combined Competitor Details for {asin}",
-                data=file,
-                file_name=combined_csv_filename,
-                mime='text/csv'
-            )
+        # Display the download link for the combined CSV
+        if 'csv_download_link' in st.session_state:
+            st.markdown(f"[Download Combined Competitor Details CSV]({st.session_state['csv_download_link']})")
     else:
         st.write("No competitor data available for the selected date range.")
 

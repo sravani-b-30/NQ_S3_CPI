@@ -313,19 +313,19 @@ def load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix):
     asin_keyword_df = load_latest_csv_from_s3(s3_folder, 'asin_keyword_id_mapping').compute()
     keyword_id_df = load_latest_csv_from_s3(s3_folder, 'keyword_x_keyword_id').compute()
 
-    df_scrapped = load_static_file_from_s3(s3_folder, static_file_name).compute()
-    #st.write("Loaded df_scrapped (NAPQUEEN.csv):", df_scrapped.head())
+    # df_scrapped = load_static_file_from_s3(s3_folder, static_file_name).compute()
+    # #st.write("Loaded df_scrapped (NAPQUEEN.csv):", df_scrapped.head())
 
-    df_scrapped['ASIN'] = df_scrapped['ASIN'].str.upper()
-    df_scrapped_cleaned = df_scrapped.drop_duplicates(subset='ASIN')
+    # df_scrapped['ASIN'] = df_scrapped['ASIN'].str.upper()
+    # df_scrapped_cleaned = df_scrapped.drop_duplicates(subset='ASIN')
 
     # Load dynamic files with latest dates using delayed Dask tasks
     merged_data_delayed = delayed(load_latest_csv_from_s3(s3_folder, 'merged_data_'))
     merged_data_df = dd.from_delayed([delayed(merged_data_delayed)])
     #st.write("Latest merged_data file name loaded:", merged_data_df.head())
 
-    merged_data_df = merged_data_df.rename(columns={"title": "product_title", "ASIN" : "asin"})
-    merged_data_df['asin'] = merged_data_df['asin'].str.upper()
+    merged_data_df = merged_data_df.rename(columns={"title": "product_title"})
+    merged_data_df['ASIN'] = merged_data_df['ASIN'].str.upper()
 
     def fill_missing_brand(df):
         missing_brand_mask = df['brand'].isna() | (df['brand'] == "")
@@ -336,11 +336,11 @@ def load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix):
     merged_data_df = merged_data_df.map_partitions(fill_missing_brand)
 
     merged_data_df['price'] = dd.to_numeric(merged_data_df['price'], errors='coerce')
-    merged_data_df = dd.merge(
-        df_scrapped_cleaned,
-            merged_data_df[['asin', 'brand', 'product_title', 'price', 'date']],
-            left_on='ASIN', right_on='asin', how='left'
-        )
+    # merged_data_df = dd.merge(
+    #     df_scrapped_cleaned,
+    #         merged_data_df[['asin', 'brand', 'product_title', 'price', 'date']],
+    #         left_on='ASIN', right_on='asin', how='left'
+    #     )
         
     merged_data_df = merged_data_df.compute()
 

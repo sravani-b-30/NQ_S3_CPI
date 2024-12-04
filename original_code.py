@@ -1046,7 +1046,7 @@ def process_date(merged_data_df, asin, date_str, price_min, price_max, compulsor
         return None
 
     try:
-        target_price = df_current_day[df_current_day['asin'] == asin]['price'].values[0]
+        target_price = df_current_day[df_current_day['ASIN'] == asin]['price'].values[0]
     except IndexError:
         st.error(f"ASIN {asin} not found for date {date_str}")
         return None
@@ -1335,7 +1335,7 @@ def run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_ma
     
     merged_data_df['date'] = pd.to_datetime(merged_data_df['date'], errors='coerce')
     df_recent = merged_data_df[merged_data_df['date'] == merged_data_df['date'].max()]
-    df_recent = df_recent.drop_duplicates(subset=['asin'])
+    df_recent = df_recent.drop_duplicates(subset=['ASIN'])
 
     # Ensure that ASIN exists in the dataset
     if asin not in merged_data_df['ASIN'].values:

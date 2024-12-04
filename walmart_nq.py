@@ -752,7 +752,7 @@ def run_analysis(asin, price_min, price_max, target_price, compulsory_features, 
 
     # Create a DataFrame to store competitor details
     competitor_details_df = pd.DataFrame(similar_products, columns=[
-        'ASIN', 'Title', 'Price', 'Weighted Score', 'Details Score',
+        'ID', 'Title', 'Price', 'Weighted Score', 'Details Score',
         'Title Score', 'Description Score', 'Product Details',
         'Details Comparison', 'Title Comparison', 'Description Comparison', 'Brand', 'Matching Features'
     ])
@@ -767,7 +767,7 @@ def run_analysis(asin, price_min, price_max, target_price, compulsory_features, 
     # )
 
     # Filter the dataframe to include only the required columns
-    competitor_details_df = competitor_details_df[['ASIN', 'Title', 'Price', 'Product Dimension', 'Brand', 'Matching Features']]
+    competitor_details_df = competitor_details_df[['ID', 'Title', 'Price', 'Product Dimension', 'Brand', 'Matching Features']]
     date = merged_data_df['date'].max().strftime('%Y-%m-%d')
     competitor_details_df['date'] = date
 
@@ -891,7 +891,7 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
             colorbar=dict(title="Weighted Score")
         ),
         hoverinfo='text',
-        text=[f"ASIN: {a}<br>Title: {t}<br>Price: ${p:.2f}" 
+        text=[f"ID: {a}<br>Title: {t}<br>Price: ${p:.2f}" 
               for a, t, p in zip(asin_list, product_titles, prices)],
         name='Similar Products'
     ))
@@ -903,12 +903,12 @@ def perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_fe
         mode='markers',
         marker=dict(size=15, color='red', symbol='star'),
         hoverinfo='text',
-        text=[f"ASIN: {asin}<br>Title: {target_product['product_title']}<br>Price: ${target_price:.2f}"],
+        text=[f"ID: {asin}<br>Title: {target_product['product_title']}<br>Price: ${target_price:.2f}"],
         name='Target Product'
     ))
 
     fig.update_layout(
-        title=f"Comparison of Similar Products to ASIN: {asin}",
+        title=f"Comparison of Similar Products to Walmart_ID: {asin}",
         xaxis_title="Index",
         yaxis_title="Price ($)",
         hovermode="closest",
@@ -1098,7 +1098,7 @@ def calculate_and_plot_cpi(merged_data_df, asin_list, start_date, end_date, pric
             csv_content = combined_competitor_df.to_csv(index=False).encode('utf-8')
 
             # Define the S3 key
-            s3_key = f"NAPQUEEN/combined_competitors_{asin}_{start_date}_{end_date}.csv"
+            s3_key = f"WALMART/combined_competitors_{asin}_{start_date}_{end_date}.csv"
 
             # Upload CSV to S3 and get presigned URL
             presigned_url = upload_competitor_data_to_s3(csv_content, s3_key)
@@ -1108,7 +1108,7 @@ def calculate_and_plot_cpi(merged_data_df, asin_list, start_date, end_date, pric
             st.error("No competitor data available for the selected date range.")
             # Create result DataFrame and store in session state
         result_df = pd.DataFrame(all_results,
-                                columns=['Date', 'ASIN', 'Target Price', 'CPI Score', 'Number Of Competitors Found',
+                                columns=['Date', 'ID', 'Target Price', 'CPI Score', 'Number Of Competitors Found',
                                         'Size', 'Product Dimension', 'Competitor Prices', 'Dynamic CPI'])
         st.session_state['result_df'] = result_df
     else:

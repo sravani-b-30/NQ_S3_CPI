@@ -596,48 +596,6 @@ def fetch_price_tracker_data(marketplace, days=90):
 
     return price_tracker_df
 
-def replace_napqueen_prices(merged_df,price_tracker_df):
-    
-    napqueen_df = merged_df.copy()
-    napqueen_df.info()
-
-    # Step 1: Filter napqueen products from merged_df
-    napqueen_df = napqueen_df[napqueen_df['brand'] == 'napqueen']
-    napqueen_df.info()
-
-    price_tracker_df = price_tracker_df.sort_values(by='Date', ascending=False)
-    price_tracker_df = price_tracker_df.drop_duplicates(subset=['asin'], keep='first')
- 
-    # Step 2: Merge napqueen_df with price_tracker_df on 'asin'
-    napqueen_df = pd.merge(napqueen_df, price_tracker_df[['asin', 'listingPrice']], on='asin', how='left')
-    napqueen_df.info()
-
-    # Step 3: Replace sale_price with listingPrice in napqueen_df where available
-    #napqueen_df['sale_price'] = napqueen_df['listingPrice'].combine_first(napqueen_df['sale_price'])
-    napqueen_df['sale_price'] = np.where(
-        napqueen_df['listingPrice'].notna(),  # Condition: If listingPrice is not null
-        napqueen_df['listingPrice'],         # Replace with listingPrice
-        napqueen_df['sale_price']            # Otherwise, retain sale_price
-    )
-
-    # Step 4: Drop the listingPrice column as it's no longer needed in napqueen_df
-    napqueen_df.drop(columns=['listingPrice'], inplace=True)
-    napqueen_df.info()
-    # Step 5: Remove napqueen products from the original merged_df
-    merged_df = merged_df[merged_df['brand'] != 'napqueen']
-    logger.info(f"After removing napqueen products : ")
-    merged_df.info()
-
-    # Step 6: Append the updated napqueen_df back to merged_df
-    merged_df = pd.concat([merged_df, napqueen_df], ignore_index=True)
-    logger.info(f"After adding back napqueen products :" )
-    merged_df.info()
-
-    merged_df.to_csv('napqueen_prices.csv', index=False)
-    # Step 7: Return the final merged DataFrame with updated napqueen prices
-    return merged_df
-
-
 def save_pricetracker_df_to_s3(df, bucket_name, s3_folder, file_name):
     """
     Saves a DataFrame to an S3 bucket as a CSV file.
@@ -704,7 +662,7 @@ def process_asin_price_data(df, days=60):
         last_30_days_df = df[(df['date'] <= analysis_date) & (df['date'] > start_date)]
         
         # Sort the DataFrame by ASIN and date (descending order)
-        last_30_days_df = last_30_days_df.sort_values(by=['asin', 'date'], ascending=[True, False])
+        last_30_days_df = last_30_days_df.sort_values(by=['asin', 'date'], ascending=[False, False])
 
         # Get unique ASINs and their corresponding latest prices and other details
         unique_asins = last_30_days_df.groupby('asin').agg({
@@ -735,43 +693,104 @@ def process_asin_price_data(df, days=60):
     return final_df
 
 
-def merge_and_clean_data(df, df_price):
-    """
-    Merges two dataframes on 'asin' and 'date', fills missing price values, and cleans the merged data.
-
-    :param df: DataFrame containing ASIN and price data with 'analysis_date' to be renamed as 'date'.
-    :param df_price: DataFrame containing additional price data to merge.
-    :return: Merged and cleaned DataFrame.
-    """
-
+def replace_napqueen_prices(final_df ,price_tracker_df):
+    
     # Rename 'analysis_date' to 'date'
-    df = df.rename(columns={'analysis_date': 'date'})
+    final_df = final_df.rename(columns={'analysis_date': 'date'})
+    logger.info(f"After aggregating and renaming columns of serp data :")
+    logger.info(final_df.columns)
+    logger.info(final_df.info())
 
-    # Ensure 'date' columns in both dataframes are in datetime format
-    df['date'] = pd.to_datetime(df['date'])
-    df_price['Date'] = pd.to_datetime(df_price['Date'])
-    df_price.rename(columns={'asin': 'product_ID'}, inplace=True)
+    napqueen_df = final_df.copy()
+    napqueen_df.info()
+    logger.info("Starting replacement of NapQueen prices.")
+    
+    # Step 1: Filter napqueen products from merged_df
+    napqueen_df = napqueen_df[napqueen_df['brand'] == 'napqueen']
+    napqueen_df.info()
+    logger.info(f"Top 5 NapQueen ASINs before processing:\n{napqueen_df.head(5)}")
+    
+    napqueen_df['date'] = pd.to_datetime(napqueen_df['date'])
 
-    # Fill missing price values by forward and backward filling within 'asin' and 'date' groups
-    df['price'] = df.groupby(['asin', 'date'])['price'].transform(lambda group: group.ffill().bfill())
+    price_tracker_df['Date'] = pd.to_datetime(price_tracker_df['Date'])
+    price_tracker_df = price_tracker_df.sort_values(by='Date', ascending=False)
+    #price_tracker_df = price_tracker_df.drop_duplicates(subset=['asin'], keep='first')
 
-    # Merge the two DataFrames on 'asin' and 'date' (using a left join)
-    merged_df = pd.merge(
-        df,
-        df_price[['Date', 'product_ID', 'listingPrice']],
-        how='left',
-        left_on=['asin', 'date'],
-        right_on=['product_ID', 'Date']
+    napqueen_asins = napqueen_df['asin'].head(5).tolist()
+    logger.info(f"Listing prices from price_tracker_df for top 5 NapQueen ASINs:\n"
+                  f"{price_tracker_df[price_tracker_df['asin'].isin(napqueen_asins)]}")
+
+ 
+    # Step 2: Merge napqueen_df with price_tracker_df on 'asin'
+    napqueen_df = pd.merge(napqueen_df, price_tracker_df[['asin', 'listingPrice', 'Date']], left_on= ['asin', 'date'], right_on=['asin', 'Date'], how='left')
+    napqueen_df.info()
+    logger.info(f"After merging with price_tracker_df:\n{napqueen_df.head(5)}")
+
+    # Step 3: Replace sale_price with listingPrice in napqueen_df where available
+    napqueen_df['sale_price'] = np.where(
+        napqueen_df['listingPrice'].notna(),  # Condition: If listingPrice is not null
+        napqueen_df['listingPrice'],         # Replace with listingPrice
+        napqueen_df['sale_price']            # Otherwise, retain sale_price
     )
+    logger.info(f"Updated sale_price in NapQueen products:\n{napqueen_df.head(5)}")
 
-    # Fill missing 'price' values with 'listingPrice'
-    # merged_df['price'] = merged_df['price'].fillna(merged_df['listingPrice'])
+    # Step 4: Drop the listingPrice column as it's no longer needed in napqueen_df
+    napqueen_df.drop(columns=['listingPrice'], inplace=True)
+    napqueen_df.info()
+    # Step 5: Remove napqueen products from the original merged_df
+    merged_df = final_df[final_df['brand'] != 'napqueen']
+    logger.info(f"After removing napqueen products : ")
+    merged_df.info()
 
-    # Drop unnecessary columns from the merge
-    merged_df = merged_df.drop(columns=['product_ID', 'Date', 'listingPrice'])
+    # Step 6: Append the updated napqueen_df back to merged_df
+    merged_df = pd.concat([merged_df, napqueen_df], ignore_index=True)
+    logger.info(f"After adding back napqueen products :")
+    merged_df.info()
+    logger.info("NapQueen price replacement complete.")
+    logger.info(f"Final merged_df sample after replacement:\n{merged_df[merged_df['asin'].isin(napqueen_asins)]}")
 
-    logger.info("Process 6: Post-Cleaning Data")
+    logger.info("Process 6: Replacing napqueen prices is done")
+    
     return merged_df
+
+
+# def merge_and_clean_data(df, df_price):
+#     """
+#     Merges two dataframes on 'asin' and 'date', fills missing price values, and cleans the merged data.
+
+#     :param df: DataFrame containing ASIN and price data with 'analysis_date' to be renamed as 'date'.
+#     :param df_price: DataFrame containing additional price data to merge.
+#     :return: Merged and cleaned DataFrame.
+#     """
+
+#     # Rename 'analysis_date' to 'date'
+#     df = df.rename(columns={'analysis_date': 'date'})
+
+#     # Ensure 'date' columns in both dataframes are in datetime format
+#     df['date'] = pd.to_datetime(df['date'])
+#     df_price['Date'] = pd.to_datetime(df_price['Date'])
+#     df_price.rename(columns={'asin': 'product_ID'}, inplace=True)
+
+#     # Fill missing price values by forward and backward filling within 'asin' and 'date' groups
+#     df['price'] = df.groupby(['asin', 'date'])['price'].transform(lambda group: group.ffill().bfill())
+
+#     # Merge the two DataFrames on 'asin' and 'date' (using a left join)
+#     merged_df = pd.merge(
+#         df,
+#         df_price[['Date', 'product_ID', 'listingPrice']],
+#         how='left',
+#         left_on=['asin', 'date'],
+#         right_on=['product_ID', 'Date']
+#     )
+
+#     # Fill missing 'price' values with 'listingPrice'
+#     # merged_df['price'] = merged_df['price'].fillna(merged_df['listingPrice'])
+
+#     # Drop unnecessary columns from the merge
+#     merged_df = merged_df.drop(columns=['product_ID', 'Date', 'listingPrice'])
+
+    
+#     return merged_df
 
 def product_details_merge_data(df, df_scrapped_info):
     """
@@ -1123,14 +1142,12 @@ if __name__ == '__main__':
 
     #Step 4
     df_price_tracker = fetch_price_tracker_data(marketplace="Amazon", days=90)
-    df = replace_napqueen_prices(df, df_price_tracker)
     #Step 5
     df = process_asin_price_data(df, days=60)
     multiprocessing.freeze_support()
-    #Step 6
 
-    df = merge_and_clean_data(df,df_price_tracker)
-    # Save intermediate CSV locally (optional for debugging)
+    df = replace_napqueen_prices(df, df_price_tracker)
+
     intermediate_file = f"/tmp/{brand}_testing.csv"
     df.to_csv(intermediate_file, index=False)
     today_date = datetime.now().strftime('%Y-%m-%d')

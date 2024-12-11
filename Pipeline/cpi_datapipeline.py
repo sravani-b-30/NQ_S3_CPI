@@ -735,7 +735,7 @@ def replace_napqueen_prices(df, df_price_tracker):
     logger.info(f"Updated sale_price in NapQueen products:\n{napqueen_df.head(5)}")
 
     # Step 4: Drop the listingPrice column as it's no longer needed in napqueen_df
-    napqueen_df.drop(columns=['listingPrice'], inplace=True)
+    napqueen_df.drop(columns=['listingPrice', 'Date'], inplace=True)
     napqueen_df.info()
     # Step 5: Remove napqueen products from the original merged_df
     merged_df = df[df['brand'] != 'napqueen']

@@ -727,10 +727,10 @@ def replace_napqueen_prices(final_df ,price_tracker_df):
     logger.info(f"After merging with price_tracker_df:\n{napqueen_df.head(5)}")
 
     # Step 3: Replace sale_price with listingPrice in napqueen_df where available
-    napqueen_df['sale_price'] = np.where(
+    napqueen_df['price'] = np.where(
         napqueen_df['listingPrice'].notna(),  # Condition: If listingPrice is not null
         napqueen_df['listingPrice'],         # Replace with listingPrice
-        napqueen_df['sale_price']            # Otherwise, retain sale_price
+        napqueen_df['price']            # Otherwise, retain sale_price
     )
     logger.info(f"Updated sale_price in NapQueen products:\n{napqueen_df.head(5)}")
 

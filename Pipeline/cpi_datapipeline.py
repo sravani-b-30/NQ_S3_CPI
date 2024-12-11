@@ -1160,7 +1160,7 @@ if __name__ == '__main__':
     )
 
     #Step 7
-    file_path = "Pipeline\\NAPQUEEN.csv"
+    file_path = "Pipeline/NAPQUEEN.csv"
     scrapper_handler(df,file_path)
 
     # Save the updated NAPQUEEN.csv to S3

@@ -693,15 +693,15 @@ def process_asin_price_data(df, days=60):
     return final_df
 
 
-def replace_napqueen_prices(final_df ,price_tracker_df):
+def replace_napqueen_prices(df, df_price_tracker):
     
     # Rename 'analysis_date' to 'date'
-    final_df = final_df.rename(columns={'analysis_date': 'date'})
+    df = df.rename(columns={'analysis_date': 'date'})
     logger.info(f"After aggregating and renaming columns of serp data :")
-    logger.info(final_df.columns)
-    logger.info(final_df.info())
+    logger.info(df.columns)
+    logger.info(df.info())
 
-    napqueen_df = final_df.copy()
+    napqueen_df = df.copy()
     napqueen_df.info()
     logger.info("Starting replacement of NapQueen prices.")
     
@@ -712,17 +712,17 @@ def replace_napqueen_prices(final_df ,price_tracker_df):
     
     napqueen_df['date'] = pd.to_datetime(napqueen_df['date'])
 
-    price_tracker_df['Date'] = pd.to_datetime(price_tracker_df['Date'])
-    price_tracker_df = price_tracker_df.sort_values(by='Date', ascending=False)
+    df_price_tracker['Date'] = pd.to_datetime(df_price_tracker['Date'])
+    df_price_tracker = df_price_tracker.sort_values(by='Date', ascending=False)
     #price_tracker_df = price_tracker_df.drop_duplicates(subset=['asin'], keep='first')
 
     napqueen_asins = napqueen_df['asin'].head(5).tolist()
     logger.info(f"Listing prices from price_tracker_df for top 5 NapQueen ASINs:\n"
-                  f"{price_tracker_df[price_tracker_df['asin'].isin(napqueen_asins)]}")
+                  f"{df_price_tracker[df_price_tracker['asin'].isin(napqueen_asins)]}")
 
  
     # Step 2: Merge napqueen_df with price_tracker_df on 'asin'
-    napqueen_df = pd.merge(napqueen_df, price_tracker_df[['asin', 'listingPrice', 'Date']], left_on= ['asin', 'date'], right_on=['asin', 'Date'], how='left')
+    napqueen_df = pd.merge(napqueen_df, df_price_tracker[['asin', 'listingPrice', 'Date']], left_on= ['asin', 'date'], right_on=['asin', 'Date'], how='left')
     napqueen_df.info()
     logger.info(f"After merging with price_tracker_df:\n{napqueen_df.head(5)}")
 
@@ -738,7 +738,7 @@ def replace_napqueen_prices(final_df ,price_tracker_df):
     napqueen_df.drop(columns=['listingPrice'], inplace=True)
     napqueen_df.info()
     # Step 5: Remove napqueen products from the original merged_df
-    merged_df = final_df[final_df['brand'] != 'napqueen']
+    merged_df = df[df['brand'] != 'napqueen']
     logger.info(f"After removing napqueen products : ")
     merged_df.info()
 

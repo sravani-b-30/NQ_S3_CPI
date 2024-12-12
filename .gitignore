@@ -12,3 +12,5 @@ Files
 testing_pipeline.py
 cpi_daily_run_script_v0 (2).py
 git_repo_details.txt
+WMT_product_details.csv
+seperate_date_files.py

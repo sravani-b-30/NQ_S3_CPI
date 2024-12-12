@@ -14,3 +14,6 @@ cpi_daily_run_script_v0 (2).py
 git_repo_details.txt
 WMT_product_details.csv
 seperate_date_files.py
+client.py
+priceTrackerAmazon_test.py
+update_products_v2.py

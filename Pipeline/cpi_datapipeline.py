@@ -712,7 +712,8 @@ def replace_napqueen_prices(df, df_price_tracker):
     
     napqueen_df['date'] = pd.to_datetime(napqueen_df['date'])
 
-    df_price_tracker['Date'] = pd.to_datetime(df_price_tracker['Date'])
+    df_price_tracker['Date'] = pd.to_datetime(df_price_tracker['Date'], format='mixed').dt.date
+    logger.info(f"Printing Data Type of Date column in price_tracker_df : {df_price_tracker['Date'].dtype}")
     df_price_tracker = df_price_tracker.sort_values(by='Date', ascending=False)
     #price_tracker_df = price_tracker_df.drop_duplicates(subset=['asin'], keep='first')
 

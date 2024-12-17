@@ -812,9 +812,9 @@ def calculate_and_plot_cpi(merged_data_df, asin_list, start_date, end_date, pric
     st.subheader("Analysis Results")
     st.dataframe(result_df)
 
-    result_df['asin'] = result_df['asin'].str.upper().str.strip()
+    result_df['ASIN'] = result_df['ASIN'].str.upper().str.strip()
 
-    result_df['Date'] = pd.to_datetime(result_df['date'], format='%Y-%m-%d')
+    result_df['Date'] = pd.to_datetime(result_df['Date'], format='%Y-%m-%d')
 
     st.subheader("Time-Series Analysis Results")
     plot_results(result_df, asin_list, start_date, end_date)
@@ -855,7 +855,7 @@ def plot_competitor_vs_null_analysis(competitor_count_per_day, null_price_count_
 def plot_results(result_df, asin_list, start_date, end_date):
 
     for asin in asin_list:
-        asin_results = result_df[result_df['asin'] == asin]
+        asin_results = result_df[result_df['ASIN'] == asin]
         
         fig, ax1 = plt.subplots(figsize=(12, 6))
 

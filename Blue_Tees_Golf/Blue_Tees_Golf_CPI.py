@@ -268,12 +268,13 @@ def load_and_preprocess_data():
     merged_data_df = merged_data_df.rename(columns={"Title": "product_title", "ASIN":"asin", "sale_price":"price"})
     merged_data_df['asin'] = merged_data_df['asin'].str.upper()
 
-    def fill_missing_brand(df):
-        missing_brand_mask = df['brand'].isna() | (df['brand'] == "")
-        df.loc[missing_brand_mask, 'brand'] = df.loc[missing_brand_mask, 'product_title'].apply(extract_brand_from_title)
-        return df
+    def fill_missing_brand(row):
+        if pd.isna(row['brand']) or row['brand'] == "":
+            return extract_brand_from_title(row['product_title'])
+        return row['brand']
 
-    merged_data_df = merged_data_df.apply(fill_missing_brand)
+    # Apply the fill_missing_brand function row-wise
+    merged_data_df['brand'] = merged_data_df.apply(fill_missing_brand, axis=1)
 
     merged_data_df['price'] =pd.to_numeric(merged_data_df['price'], errors='coerce')
 

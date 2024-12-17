@@ -263,7 +263,7 @@ def load_and_preprocess_data():
     keyword_id_df = pd.read_csv("Blue_Tees_Golf/keyword_x_keyword_id.csv", on_bad_lines='skip')
 
     merged_data_df = pd.read_csv("Blue_Tees_Golf/merged_data_2024-12-17.csv", on_bad_lines='skip')
-    st.write("Latest merged_data file name loaded:", merged_data_df.head())
+    #st.write("Latest merged_data file name loaded:", merged_data_df.head())
 
     merged_data_df = merged_data_df.rename(columns={"Title": "product_title", "ASIN":"asin", "sale_price":"price"})
     merged_data_df['asin'] = merged_data_df['asin'].str.upper()
@@ -289,7 +289,7 @@ asin_keyword_df, keyword_id_df, merged_data_df = load_and_preprocess_data()
 
 
 if 'show_features_df' not in st.session_state:
-    _, _, merged_data_df, _ = load_and_preprocess_data()
+    _, _, merged_data_df = load_and_preprocess_data()
     st.session_state['show_features_df'] = merged_data_df
 else:
     merged_data_df = st.session_state['show_features_df']

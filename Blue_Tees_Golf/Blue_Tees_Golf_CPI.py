@@ -748,7 +748,7 @@ def process_date(merged_data_df, asin, date_str, price_min, price_max, compulsor
         'result': result,
         'daily_null_count': daily_null_count,
         'num_competitors_found': result[3],
-        'competitors': result[4]
+        'competitors': result[5]
     }
 
 def calculate_and_plot_cpi(merged_data_df, asin_list, start_date, end_date, price_min, price_max, compulsory_features, same_brand_option):

@@ -751,7 +751,7 @@ def process_date(merged_data_df, asin, date_str, price_min, price_max, compulsor
         'competitors': result[7]
     }
 
-def calculate_and_plot_cpi(merged_data_df, price_data_df, asin_list, start_date, end_date, price_min, price_max, compulsory_features, same_brand_option):
+def calculate_and_plot_cpi(merged_data_df, asin_list, start_date, end_date, price_min, price_max, compulsory_features, same_brand_option):
     asin = asin_list[0]
     dates_to_process = []
 
@@ -918,7 +918,7 @@ def plot_distribution_graph(result_df, asin, selected_date):
 
     st.plotly_chart(fig)
 
-def run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_max, target_price, start_date, end_date, same_brand_option, compulsory_features):
+def run_analysis_button(merged_data_df, asin, price_min, price_max, target_price, start_date, end_date, same_brand_option, compulsory_features):
   
     st.session_state['recompute'] = True
     
@@ -960,7 +960,7 @@ def run_analysis_button(merged_data_df, price_data_df, asin, price_min, price_ma
 
     if start_date and end_date:
         perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, df_recent, compulsory_keywords, non_compulsory_keywords, generate_csv=generate_csv_option)
-        calculate_and_plot_cpi(merged_data_df, price_data_df, [asin], start_date, end_date, price_min, price_max, compulsory_features, same_brand_option)
+        calculate_and_plot_cpi(merged_data_df, [asin], start_date, end_date, price_min, price_max, compulsory_features, same_brand_option)
     else:
         perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, df_recent, compulsory_keywords, non_compulsory_keywords, generate_csv=generate_csv_option)
 
@@ -997,7 +997,6 @@ def clear_session_state_on_date_change():
             st.session_state['prev_end_date'] = end_date
 
 
-"""Streamlit UI Features"""
 
 st.title("ASIN Competitor Analysis")
 

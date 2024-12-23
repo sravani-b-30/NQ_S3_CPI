@@ -617,7 +617,7 @@ def fetch_price_tracker_data_for_asins(df):
     df['price'] = np.where(df['listingPrice'].notna(), df['listingPrice'], df['price'])
     df.drop(columns=['listingPrice'], inplace=True)
 
-    logger.info("Updated prices for excluded ASINs.")
+    logger.info("Updated prices for ASINs with listingPrice.")
     return df
 
 import pandas as pd
@@ -663,23 +663,23 @@ def process_asin_price_data(df, days=3):
             'date': 'first'
         }).reset_index()
 
-        logger.info(f"Day {i+1}: Aggregated ASIN data. Total unique ASINs: {len(unique_asins)}")
+        logger.info(f"Day {i}: Aggregated ASIN data. Total unique ASINs: {len(unique_asins)}")
 
         # Filter out ASINs whose last available date is not the analysis date
         asins_to_exclude = unique_asins[unique_asins['date'] != analysis_date]['asin'].tolist()
-        logger.info(f"Day {i+1}: ASINs to exclude due to mismatched date: {len(asins_to_exclude)}")
+        logger.info(f"Day {i}: ASINs to exclude due to mismatched date: {len(asins_to_exclude)}")
 
         # Handle price updates for excluded ASINs
         if asins_to_exclude:
-            logger.info(f"Day {i+1}: Fetching updated prices for {len(asins_to_exclude)} ASINs.")
+            logger.info(f"Day {i}: Fetching updated prices for {len(asins_to_exclude)} ASINs.")
             excluded_asins_df = unique_asins[unique_asins['asin'].isin(asins_to_exclude)]
 
             # Log a sample of ASINs to be updated
-            logger.info(f"Day {i+1}: Sample of ASINs to update: {asins_to_exclude[:5]}")
+            logger.info(f"Day {i}: Sample of ASINs to update: {asins_to_exclude[:5]}")
 
             # Fetch updated prices for these ASINs
             updated_prices_df = fetch_price_tracker_data_for_asins(excluded_asins_df)
-            logger.info(f"Day {i+1}: Fetched updated prices for {len(updated_prices_df)} ASINs.")
+            logger.info(f"Day {i}: Fetched updated prices for {len(updated_prices_df)} ASINs.")
 
             # Ensure index alignment for update
             updated_prices_df.set_index('asin', inplace=True)
@@ -687,21 +687,22 @@ def process_asin_price_data(df, days=3):
 
             # Update the prices in the unique_asins DataFrame
             unique_asins.update(updated_prices_df)
-            logger.info(f"Day {i+1}: Updated prices in the main DataFrame.")
+            logger.info(f"Day {i}: Updated prices in the main DataFrame.")
+            logger.info(f"After updating prices in unique_asins : {len(unique_asins)}")
 
             # Reset index back to default
             unique_asins.reset_index(inplace=True)
         else:
-            logger.info(f"Day {i+1}: No ASINs require price updates.")
+            logger.info(f"Day {i}: No ASINs require price updates.")
 
         # Drop the date column and assign the analysis date to all ASINs
-        logger.info(f"Day {i+1}: Dropping date column and assigning analysis date.")
+        logger.info(f"Day {i}: Dropping date column and assigning analysis date.")
         unique_asins.drop(columns=['date'], inplace=True)
         unique_asins['date'] = analysis_date
 
         # Append the processed DataFrame for the day to the list
         dfs.append(unique_asins)
-        logger.info(f"Day {i+1}: Appended processed data.")
+        logger.info(f"Day {i}: Appended processed data.")
 
     # Concatenate all DataFrames into a single DataFrame
     final_df = pd.concat(dfs, ignore_index=True)

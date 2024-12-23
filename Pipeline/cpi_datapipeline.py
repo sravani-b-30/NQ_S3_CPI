@@ -11,6 +11,7 @@ from multiprocessing import Pool
 import multiprocessing
 import certifi
 import logging
+from decimal import Decimal
 
 # Set up logging
 logging.basicConfig(
@@ -643,7 +644,7 @@ def fetch_price_tracker_data_for_asins(df):
     logger.info("Merged price data with the original DataFrame.")
 
     # Replace the 'price' column with 'listingPrice' where available
-    df['price'] = np.where(df['listingprice'].notna(), df['listingprice'], df['price'])
+    df['sale_price'] = np.where(df['listingprice'].notna(), df['listingprice'], df['sale_price'])
     df.drop(columns=['listingprice'], inplace=True)
 
     logger.info("Updated prices for ASINs with listingprice.")
@@ -680,7 +681,11 @@ def process_asin_price_data(df, days=3):
 
         # Sort the DataFrame by ASIN and date (descending order)
         last_30_days_df = last_30_days_df.sort_values(by=['asin', 'date'], ascending=[False, False])
-
+        
+        last_30_days_df = last_30_days_df.apply(
+            lambda col: col.astype(float) if col.apply(lambda x: isinstance(x, Decimal)).any() else col
+        )
+        
         # Group by ASIN and aggregate other metrics
         unique_asins = last_30_days_df.groupby('asin').agg({
             'title': 'first',
@@ -709,10 +714,14 @@ def process_asin_price_data(df, days=3):
             # Fetch updated prices for these ASINs
             updated_prices_df = fetch_price_tracker_data_for_asins(excluded_asins_df)
             logger.info(f"Day {i}: Fetched updated prices for {len(updated_prices_df)} ASINs.")
+            
+            updated_prices_df = updated_prices_df.apply(
+                lambda col: col.astype(float) if col.apply(lambda x: isinstance(x, Decimal)).any() else col
+            )
 
             # Ensure index alignment for update
-            updated_prices_df.set_index('asin', inplace=True)
-            unique_asins.set_index('asin', inplace=True)
+            # updated_prices_df.set_index('asin', inplace=True)
+            # unique_asins.set_index('asin', inplace=True)
 
             # Update the prices in the unique_asins DataFrame
             unique_asins.update(updated_prices_df)
@@ -746,7 +755,7 @@ def process_asin_price_data(df, days=3):
 def replace_napqueen_prices(df, df_price_tracker):
     
     # Rename 'analysis_date' to 'date'
-    df = df.rename(columns={'analysis_date': 'date'})
+    df = df.rename(columns={'analysis_date': 'date', 'sale_price':'price'})
     logger.info(f"After aggregating and renaming columns of serp data :")
     logger.info(df.columns)
     logger.info(df.info())

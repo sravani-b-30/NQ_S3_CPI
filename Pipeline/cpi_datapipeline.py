@@ -1192,7 +1192,7 @@ if __name__ == '__main__':
     df = fetch_and_merge_product_data(df)
 
     #Step 4
-    df_price_tracker = fetch_price_tracker_data(marketplace="Amazon", days=30)
+    df_price_tracker = fetch_price_tracker_data(marketplace="Amazon", days=3)
     #Step 5
     df = process_asin_price_data(df, days=3)
     multiprocessing.freeze_support()

@@ -481,7 +481,7 @@ def save_to_s3(df, brand, file_name):
     except Exception as e:
         logger.error(f"Failed to save {file_name} to S3: {e}")
 
-def fetch_price_tracker_data(marketplace, days=1):
+def fetch_price_tracker_data(marketplace, days=3):
     """
     This function fetches price tracking data for a given marketplace from the last `days` days,
     loads it into a DataFrame, and saves the result as a CSV file.
@@ -586,9 +586,21 @@ def save_pricetracker_df_to_s3(df, bucket_name, s3_folder, file_name):
         logger.error(f"Failed to save {file_name} to S3: {e}")
 
 def fetch_price_tracker_data_for_asins(df):
+    """
+    Fetches updated prices for the given ASINs from the price tracker table.
+
+    :param df: DataFrame containing ASINs for which prices need to be updated.
+    :return: DataFrame with updated prices.
+    """
     # Get unique ASINs to fetch prices for
     asin_list = df['asin'].unique().tolist()
+    if not asin_list:
+        logger.warning("No ASINs provided for price fetching.")
+        return df
 
+    logger.info(f"Fetching prices for {len(asin_list)} ASINs.")
+
+    # Establish database connection
     conn = pg8000.connect(
         host="postgresql-88164-0.cloudclusters.net",
         database="generic",
@@ -601,23 +613,40 @@ def fetch_price_tracker_data_for_asins(df):
     # Fetch prices from the price tracker table
     query = """
         SELECT asin,
-        price as listingPrice
+               price as listingprice
         FROM serp.sp_api_price_collector
         WHERE asin = ANY(%s);
     """
     cursor.execute(query, (asin_list,))
-    price_data = pd.DataFrame(cursor.fetchall(), columns=[desc[0] for desc in cursor.description])
-    logger.info(f"Columns from sp_api_price_collector : {price_data.head()}")
-    
+    rows = cursor.fetchall()
+
+    if not rows:
+        logger.warning("No rows returned from the price tracker query.")
+        cursor.close()
+        conn.close()
+        return df  # Return the original DataFrame if no updates are available
+
+    # Convert query results to a DataFrame
+    price_data = pd.DataFrame(rows, columns=[desc[0] for desc in cursor.description])
+    logger.info(f"Fetched price data. Sample:\n{price_data.head()}")
+
     cursor.close()
     conn.close()
 
-    # Merge updated prices into the DataFrame
-    df = pd.merge(df, price_data, on='asin', how='left')
-    df['price'] = np.where(df['listingPrice'].notna(), df['listingPrice'], df['price'])
-    df.drop(columns=['listingPrice'], inplace=True)
+    # Check if 'listingPrice' exists in the fetched data
+    if 'listingprice' not in price_data.columns:
+        logger.error("'listingprice' column is missing in the fetched price data.")
+        return df
 
-    logger.info("Updated prices for ASINs with listingPrice.")
+    # Merge updated prices into the original DataFrame
+    df = pd.merge(df, price_data, on='asin', how='left')
+    logger.info("Merged price data with the original DataFrame.")
+
+    # Replace the 'price' column with 'listingPrice' where available
+    df['price'] = np.where(df['listingprice'].notna(), df['listingprice'], df['price'])
+    df.drop(columns=['listingprice'], inplace=True)
+
+    logger.info("Updated prices for ASINs with listingprice.")
     return df
 
 import pandas as pd
@@ -1163,9 +1192,9 @@ if __name__ == '__main__':
     df = fetch_and_merge_product_data(df)
 
     #Step 4
-    df_price_tracker = fetch_price_tracker_data(marketplace="Amazon", days=90)
+    df_price_tracker = fetch_price_tracker_data(marketplace="Amazon", days=30)
     #Step 5
-    df = process_asin_price_data(df, days=60)
+    df = process_asin_price_data(df, days=3)
     multiprocessing.freeze_support()
 
     df = replace_napqueen_prices(df, df_price_tracker)

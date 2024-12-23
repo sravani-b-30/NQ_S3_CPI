@@ -304,8 +304,6 @@ def active_keyword_ids(brand):
             connection.close()
             logger.info("Database connection closed.")
 
-
-
 def fetch_serp_data(updated_df):
     # Extract product IDs as a list
 
@@ -333,8 +331,10 @@ def fetch_serp_data(updated_df):
     # Create a cursor object
     cursor = conn.cursor()
     # Define the date range
-    end_date = datetime.now().date() + timedelta(days=1)
-    start_date = end_date - timedelta(days=90)
+    # end_date = datetime.now().date() + timedelta(days=1)
+    # start_date = end_date - timedelta(days=90)
+    start_date = datetime.now().date() - timedelta(days=30)
+    end_date = datetime.now().date()
     logger.info(f"Fetching SERP data from {start_date} to {end_date}")
 
     # Initialize an empty list to collect dataframes
@@ -381,50 +381,6 @@ def fetch_serp_data(updated_df):
     # Return the merged DataFrame
     logger.info("Process 2: Finding SERP Data")
     return merged_df
-
-
-# def fetch_and_merge_product_data(df):
-#     """
-#     This function reads SERP data from a CSV file, fetches additional product details from the database,
-#     merges the two DataFrames, and saves the merged result as a CSV file.
-#
-#     :param serp_data_csv: Path to the CSV file containing SERP data
-#     :return: Merged DataFrame
-#     """
-#     # Extract product IDs from the DataFrame and convert to tuple for SQL IN clause
-#     product_id_list = df['product_id'].tolist()
-#     product_id_tuple = tuple(product_id_list)
-#
-#     # Establish connection to the database
-#     conn = pg8000.connect(
-#         host="postgresql-88164-0.cloudclusters.net",
-#         database="generic",
-#         user="Pgstest",
-#         password="testwayfair",
-#         port=10102
-#     )
-#
-#     # Create a cursor object
-#     cursor = conn.cursor()
-#     # SQL query to fetch product details based on product_id
-#     query1 = f"""
-#     SELECT *
-#     FROM serp.products
-#     WHERE product_id IN {product_id_tuple}
-#     ORDER BY brand;
-#     """
-#     # Execute the query
-#     cursor.execute(query1)
-#     # Fetch all results and convert to a DataFrame
-#     df1 = pd.DataFrame(cursor.fetchall(), columns=[desc[0] for desc in cursor.description])
-#     # Merge the two DataFrames on 'product_id'
-#     merged_df = pd.merge(df, df1, on='product_id')
-#     # Close the cursor and connection
-#     cursor.close()
-#     conn.close()
-#     # Return the merged DataFrame
-#     print("Process 3: Finding Product Price Data")
-#     return merged_df
 
 def fetch_and_merge_product_data(df):
     """
@@ -525,7 +481,7 @@ def save_to_s3(df, brand, file_name):
     except Exception as e:
         logger.error(f"Failed to save {file_name} to S3: {e}")
 
-def fetch_price_tracker_data(marketplace, days=90):
+def fetch_price_tracker_data(marketplace, days=1):
     """
     This function fetches price tracking data for a given marketplace from the last `days` days,
     loads it into a DataFrame, and saves the result as a CSV file.
@@ -629,23 +585,55 @@ def save_pricetracker_df_to_s3(df, bucket_name, s3_folder, file_name):
     except Exception as e:
         logger.error(f"Failed to save {file_name} to S3: {e}")
 
+def fetch_price_tracker_data_for_asins(df):
+    # Get unique ASINs to fetch prices for
+    asin_list = df['asin'].unique().tolist()
+
+    conn = pg8000.connect(
+        host="postgresql-88164-0.cloudclusters.net",
+        database="generic",
+        user="Pgstest",
+        password="testwayfair",
+        port=10102
+    )
+    cursor = conn.cursor()
+
+    # Fetch prices from the price tracker table
+    query = """
+        SELECT asin,
+        price as listingPrice
+        FROM serp.sp_api_price_collector
+        WHERE asin = ANY(%s);
+    """
+    cursor.execute(query, (asin_list,))
+    price_data = pd.DataFrame(cursor.fetchall(), columns=[desc[0] for desc in cursor.description])
+    logger.info(f"Columns from sp_api_price_collector : {price_data.head()}")
+    
+    cursor.close()
+    conn.close()
+
+    # Merge updated prices into the DataFrame
+    df = pd.merge(df, price_data, on='asin', how='left')
+    df['price'] = np.where(df['listingPrice'].notna(), df['listingPrice'], df['price'])
+    df.drop(columns=['listingPrice'], inplace=True)
+
+    logger.info("Updated prices for excluded ASINs.")
+    return df
 
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 
-def process_asin_price_data(df, days=60):
+def process_asin_price_data(df, days=3):
     """
-    Processes the ASIN price data for the last 'days' days and saves the result to a CSV file.
+    Processes the ASIN price data for the last 'days' days and returns a consolidated DataFrame.
+    Fetches and updates prices for excluded ASINs and aggregates data for each day.
 
-    :param input_file_path: Path to the input CSV file (e.g., 'data/ehd/competitor.csv').
-    :param output_file_path: Path to save the processed CSV file (e.g., 'data/ehd/post_data.csv').
-    :param days: The number of days to analyze (default is 30).
-    :return: Processed DataFrame.
+    :param df: Input DataFrame containing ASIN data with associated details.
+    :param days: The number of days to analyze (default is 3).
+    :return: Consolidated DataFrame for the processed data.
     """
-
-    # Load the CSV file
-
+    # Ensure 'date' column is in proper datetime format
     df['date'] = pd.to_datetime(df['date'], format='mixed').dt.date
 
     # Initialize a list to store the results for each day
@@ -660,38 +648,70 @@ def process_asin_price_data(df, days=60):
 
         # Filter the DataFrame for the last 30 days
         last_30_days_df = df[(df['date'] <= analysis_date) & (df['date'] > start_date)]
-        
+
         # Sort the DataFrame by ASIN and date (descending order)
         last_30_days_df = last_30_days_df.sort_values(by=['asin', 'date'], ascending=[False, False])
 
-        # Get unique ASINs and their corresponding latest prices and other details
+        # Group by ASIN and aggregate other metrics
         unique_asins = last_30_days_df.groupby('asin').agg({
             'title': 'first',
             'sale_price': 'first',
             'brand': 'first',
             'latest_rating_count': 'first',
             'latest_stars': 'first',
-            'image_url': 'first'
+            'image_url': 'first',
+            'date': 'first'
         }).reset_index()
 
-        # Add 'analysis_date' column to track the date of analysis
-        unique_asins['analysis_date'] = analysis_date
+        logger.info(f"Day {i+1}: Aggregated ASIN data. Total unique ASINs: {len(unique_asins)}")
+
+        # Filter out ASINs whose last available date is not the analysis date
+        asins_to_exclude = unique_asins[unique_asins['date'] != analysis_date]['asin'].tolist()
+        logger.info(f"Day {i+1}: ASINs to exclude due to mismatched date: {len(asins_to_exclude)}")
+
+        # Handle price updates for excluded ASINs
+        if asins_to_exclude:
+            logger.info(f"Day {i+1}: Fetching updated prices for {len(asins_to_exclude)} ASINs.")
+            excluded_asins_df = unique_asins[unique_asins['asin'].isin(asins_to_exclude)]
+
+            # Log a sample of ASINs to be updated
+            logger.info(f"Day {i+1}: Sample of ASINs to update: {asins_to_exclude[:5]}")
+
+            # Fetch updated prices for these ASINs
+            updated_prices_df = fetch_price_tracker_data_for_asins(excluded_asins_df)
+            logger.info(f"Day {i+1}: Fetched updated prices for {len(updated_prices_df)} ASINs.")
+
+            # Ensure index alignment for update
+            updated_prices_df.set_index('asin', inplace=True)
+            unique_asins.set_index('asin', inplace=True)
+
+            # Update the prices in the unique_asins DataFrame
+            unique_asins.update(updated_prices_df)
+            logger.info(f"Day {i+1}: Updated prices in the main DataFrame.")
+
+            # Reset index back to default
+            unique_asins.reset_index(inplace=True)
+        else:
+            logger.info(f"Day {i+1}: No ASINs require price updates.")
+
+        # Drop the date column and assign the analysis date to all ASINs
+        logger.info(f"Day {i+1}: Dropping date column and assigning analysis date.")
+        unique_asins.drop(columns=['date'], inplace=True)
+        unique_asins['date'] = analysis_date
 
         # Append the processed DataFrame for the day to the list
         dfs.append(unique_asins)
-        logger.info(f"Processed ASIN data for {analysis_date}")
+        logger.info(f"Day {i+1}: Appended processed data.")
 
     # Concatenate all DataFrames into a single DataFrame
-    final_df = pd.concat(dfs)
+    final_df = pd.concat(dfs, ignore_index=True)
+    logger.info(f"Concatenated data for {days} days. Total rows: {len(final_df)}")
 
-    # Reset index and rename 'latest_sale_price' to 'price'
-    final_df = final_df.reset_index(drop=True)
-    final_df = final_df.rename(columns={"sale_price": "price"})
+    # Log a sample of the final DataFrame
+    logger.info(f"Final processed data sample:\n{final_df.head(5)}")
 
-    logger.info("Process 5: Pre-Cleaning Data")
-
+    logger.info(f"Processing complete for the last {days} days.")
     return final_df
-
 
 def replace_napqueen_prices(df, df_price_tracker):
     

@@ -482,7 +482,7 @@ def save_to_s3(df, brand, file_name):
     except Exception as e:
         logger.error(f"Failed to save {file_name} to S3: {e}")
 
-def fetch_price_tracker_data(marketplace, days=3):
+def fetch_price_tracker_data(marketplace, days=4):
     """
     This function fetches price tracking data for a given marketplace from the last `days` days,
     loads it into a DataFrame, and saves the result as a CSV file.
@@ -654,7 +654,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 
-def process_asin_price_data(df, days=3):
+def process_asin_price_data(df, days=4):
     """
     Processes the ASIN price data for the last 'days' days and returns a consolidated DataFrame.
     Fetches and updates prices for excluded ASINs and aggregates data for each day.
@@ -775,7 +775,7 @@ def replace_napqueen_prices(df, df_price_tracker):
 
     logger.info(f"Data Type of Date column in price_tracker_df: {df_price_tracker['Date'].dtype}")
     logger.info(f"Data Type of date column in serp data: {napqueen_df['date'].dtype}")
-    
+
     df_price_tracker = df_price_tracker.sort_values(by='Date', ascending=False)
     #price_tracker_df = price_tracker_df.drop_duplicates(subset=['asin'], keep='first')
 
@@ -1204,9 +1204,9 @@ if __name__ == '__main__':
     df = fetch_and_merge_product_data(df)
 
     #Step 4
-    df_price_tracker = fetch_price_tracker_data(marketplace="Amazon", days=3)
+    df_price_tracker = fetch_price_tracker_data(marketplace="Amazon", days=4)
     #Step 5
-    df = process_asin_price_data(df, days=3)
+    df = process_asin_price_data(df, days=4)
     multiprocessing.freeze_support()
 
     df = replace_napqueen_prices(df, df_price_tracker)

@@ -379,7 +379,7 @@ def fetch_serp_data(updated_df):
     conn = pg8000.connect(**db_config)
     cursor = conn.cursor()
 
-    start_date = datetime.now().date() - timedelta(days=7)
+    start_date = datetime.now().date() - timedelta(days=6)
     end_date = datetime.now().date()
     logger.info(f"Fetching SERP data from {start_date} to {end_date}")
     

@@ -654,7 +654,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 
-def process_asin_price_data(df, days=4):
+def process_asin_price_data(df, days=2):
     """
     Processes the ASIN price data for the last 'days' days and returns a consolidated DataFrame.
     Fetches and updates prices for excluded ASINs and aggregates data for each day.
@@ -1185,6 +1185,70 @@ def scrapper_handler(df,file_path, num_workers=15):
     else:
         logger.info("No new ASINs to scrape.")
 
+def fetch_latest_file_from_s3(bucket_name, prefix="merged_data_", file_extension=".csv"):
+    """
+    Fetches the latest file matching the prefix and extension from the S3 bucket.
+    """
+    s3_client = boto3.client('s3')
+    response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
+
+    if 'Contents' not in response:
+        raise FileNotFoundError(f"No files with prefix '{prefix}' found in the S3 bucket '{bucket_name}'.")
+
+    # Find the latest file based on LastModified timestamp
+    files = [
+        obj for obj in response['Contents']
+        if obj['Key'].startswith(prefix) and obj['Key'].endswith(file_extension)
+    ]
+    latest_file = max(files, key=lambda x: x['LastModified'])
+    return latest_file['Key'], latest_file['LastModified']
+
+def process_and_upload_analysis(bucket_name, new_analysis_df, prefix="merged_data_", file_extension=".csv"):
+    """
+    Processes daily analysis results, checks the file's date, and appends or creates a new file based on month difference.
+    """
+    import io
+    today = datetime.now()
+    s3_client = boto3.client('s3')
+
+    # Step 1: Fetch the latest file
+    try:
+        latest_file_key, last_modified = fetch_latest_file_from_s3(bucket_name, prefix, file_extension)
+        logger.info(f"Latest file found: {latest_file_key}, LastModified: {last_modified}")
+    except FileNotFoundError:
+        # If no files exist, create a new one
+        latest_file_key = None
+        logger.warning(f"No existing files found. Starting fresh with today's data.")
+    
+    # Step 2: Check if file exists
+    if latest_file_key:
+        # Load the file into a DataFrame directly from S3
+        obj = s3_client.get_object(Bucket=bucket_name, Key=latest_file_key)
+        existing_df = pd.read_csv(io.BytesIO(obj['Body'].read()))
+        
+        # Extract the date from the file name
+        file_date_str = latest_file_key.split('_')[-1].split('.')[0]
+        file_date = datetime.strptime(file_date_str, '%Y-%m-%d')
+
+        # Step 3: Compare months
+        if today.month == file_date.month and today.year == file_date.year:
+            logger.info("Same month. Appending to the existing file.")
+            updated_df = pd.concat([existing_df, new_analysis_df], ignore_index=True)
+        else:
+            logger.info("Different month. Creating a new file.")
+            updated_df = new_analysis_df
+    else:
+        # No existing file, start fresh
+        updated_df = new_analysis_df
+
+    # Step 4: Upload the updated DataFrame directly to S3
+    new_file_name = f"{prefix}{today.strftime('%Y-%m-%d')}{file_extension}"
+    csv_buffer = io.StringIO()
+    updated_df.to_csv(csv_buffer, index=False)
+    s3_client.put_object(Bucket=bucket_name, Key=new_file_name, Body=csv_buffer.getvalue())
+    logger.info(f"Uploaded file: {new_file_name} to S3 bucket: {bucket_name}")
+
+    return updated_df
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()
@@ -1206,10 +1270,10 @@ if __name__ == '__main__':
     #Step 4
     df_price_tracker = fetch_price_tracker_data(marketplace="Amazon", days=4)
     #Step 5
-    df = process_asin_price_data(df, days=4)
+    df = process_asin_price_data(df, days=2)
     multiprocessing.freeze_support()
 
-    df = replace_napqueen_prices(df, df_price_tracker)
+    # df = replace_napqueen_prices(df, df_price_tracker)
 
     intermediate_file = f"/tmp/{brand}_testing.csv"
     df.to_csv(intermediate_file, index=False)
@@ -1238,19 +1302,25 @@ if __name__ == '__main__':
 
     df_scrapped_info = pd.read_csv(file_path ,on_bad_lines='skip')
     df = product_details_merge_data(df, df_scrapped_info)
-
-    # Example usage:
-    today_date = datetime.now().strftime('%Y-%m-%d')
-    file_name = f'merged_data_{today_date}.csv'
-
-    #df.to_csv(file_name,index=False)
     
-    save_df_to_s3(
-        df=df,
+    merged_df = process_and_upload_analysis(
         bucket_name='anarix-cpi',
-        s3_folder=f'{brand}/',
-        file_name=file_name
+        new_analysis_df=df,
+        brand=brand
     )
+
+    # # Example usage:
+    # today_date = datetime.now().strftime('%Y-%m-%d')
+    # file_name = f'merged_data_{today_date}.csv'
+
+    # #df.to_csv(file_name,index=False)
+    
+    # save_df_to_s3(
+    #     df=merged_df,
+    #     bucket_name='anarix-cpi',
+    #     s3_folder=f'{brand}/',
+    #     file_name=file_name
+    # )
     
     # Run query and save to S3 for the brand
     query_and_save_to_s3(brand=brand)

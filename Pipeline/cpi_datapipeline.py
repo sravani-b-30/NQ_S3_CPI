@@ -871,9 +871,8 @@ def scrapper_handler(df, bucket_name, brand, file_name="NAPQUEEN.csv", num_worke
         updated_df = existing_df
 
     # Save the updated DataFrame to S3
-    save_df_to_s3(
+    save_to_s3(
         df=updated_df,
-        bucket_name=bucket_name,
         brand=brand,
         file_name=file_name
     )

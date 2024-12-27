@@ -12,6 +12,7 @@ import multiprocessing
 import certifi
 import logging
 from decimal import Decimal
+import io
 
 # Set up logging
 logging.basicConfig(
@@ -379,8 +380,8 @@ def fetch_serp_data(updated_df):
     conn = pg8000.connect(**db_config)
     cursor = conn.cursor()
 
-    start_date = datetime.now().date() - timedelta(days=7)
-    end_date = datetime.now().date()
+    start_date = datetime.now().date() - timedelta(days=2)
+    end_date = datetime.now().date() + timedelta(days=1)
     logger.info(f"Fetching SERP data from {start_date} to {end_date}")
     
     dataframes = []
@@ -786,20 +787,65 @@ def query_and_save_to_s3(brand):
     cursor.close()
     conn.close()
 
+import boto3
+import pandas as pd
+import io
 
-def scrapper_handler(df,file_path, num_workers=15):
+def fetch_latest_napqueen_file(bucket_name, brand, prefix="NAPQUEEN", file_extension=".csv"):
+    """
+    Fetches the latest file matching the prefix and extension in the brand folder from S3 based on LastModified property.
+
+    :param bucket_name: S3 bucket name.
+    :param brand: Brand folder in S3 bucket.
+    :param prefix: Prefix of the file name to look for (default is "NAPQUEEN").
+    :param file_extension: File extension to match (default is ".csv").
+    :return: DataFrame loaded from the latest file.
+    """
+    s3_client = boto3.client('s3')
+    folder_path = f"{brand}/"
+
+    try:
+        # List objects in the S3 bucket with the specified prefix
+        response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=folder_path)
+        if 'Contents' not in response:
+            raise FileNotFoundError(f"No files found in bucket '{bucket_name}' with prefix '{folder_path}'.")
+
+        # Filter files matching the prefix and extension
+        files = [
+            obj for obj in response['Contents']
+            if obj['Key'].startswith(folder_path + prefix) and obj['Key'].endswith(file_extension)
+        ]
+        if not files:
+            raise FileNotFoundError(f"No matching files found in bucket '{bucket_name}' for prefix '{prefix}'.")
+
+        # Find the latest file based on LastModified timestamp
+        latest_file = max(files, key=lambda x: x['LastModified'])
+        latest_file_key = latest_file['Key']
+        logger.info(f"Latest file found: {latest_file_key} (LastModified: {latest_file['LastModified']})")
+
+        # Fetch the latest file
+        obj = s3_client.get_object(Bucket=bucket_name, Key=latest_file_key)
+        df = pd.read_csv(io.BytesIO(obj['Body'].read()), on_bad_lines='skip')
+        logger.info(f"Fetched file '{latest_file_key}' from S3 bucket '{bucket_name}'.")
+        return df
+    except Exception as e:
+        logger.warning(f"Failed to fetch latest file from S3. Starting fresh. Error: {e}")
+        return pd.DataFrame()  # Return an empty DataFrame if no file is found
+
+
+def scrapper_handler(df, bucket_name, brand, file_name="NAPQUEEN.csv", num_workers=15):
     df['asin'] = df['asin'].str.upper()
     df_asins = df['asin'].unique().tolist()
     df_asins = [asin for asin in df_asins if asin.startswith('B')]
 
     try:
-        existing_df = pd.read_csv(file_path, on_bad_lines='skip')
+        existing_df = fetch_latest_napqueen_file(bucket_name, brand, file_name)
         total_collected = existing_df['ASIN'].tolist()
         asins_to_remove = existing_df[existing_df['Option'] == '{}']['ASIN'].str.upper().unique().tolist()
         total_collected = [asin for asin in total_collected if asin not in asins_to_remove]
         logger.info("Loaded existing ASIN data from file.")
     except FileNotFoundError:
-        logger.warning(f"File not found: {file_path}. Starting with an empty list.")
+        logger.warning(f"File not found: {file_name}. Starting with an empty list.")
         total_collected = []
 
     asins = [asin for asin in df_asins if asin not in total_collected]
@@ -812,12 +858,27 @@ def scrapper_handler(df,file_path, num_workers=15):
     if asins:
         logger.info(f"Starting parallel scraping with {num_workers} workers.")
         try:
-            parallel_scrape(asins, num_workers, file_path)
-            logger.info("Scraping completed successfully.")
+            parallel_scrape(asins, num_workers, file_name)
+
+            # Load the updated file after scraping
+            updated_df = pd.read_csv(file_name, on_bad_lines='skip')
+            logger.info("Scraping completed and data appended to s3 bucket file.")
         except Exception as e:
             logger.error(f"Error during parallel scraping: {e}")
+            updated_df = existing_df 
     else:
         logger.info("No new ASINs to scrape.")
+        updated_df = existing_df
+
+    # Save the updated DataFrame to S3
+    save_df_to_s3(
+        df=updated_df,
+        bucket_name=bucket_name,
+        brand=brand,
+        file_name=file_name
+    )
+
+    return updated_df
 
 def fetch_latest_file_from_s3(bucket_name, prefix="merged_data_", file_extension=".csv"):
     """
@@ -902,48 +963,60 @@ if __name__ == '__main__':
 
     final_combined_data = align_and_combine_serp_and_sp_api_data(df_product_data, sp_api_data)
     
+    today_date = datetime.now().strftime('%Y-%m-%d')
+
     save_df_to_s3(
         df=final_combined_data,  # Load the updated file into a DataFrame
         bucket_name='anarix-cpi',
         s3_folder=f'{brand}/',
-        file_name='serp_data_test.csv'
+        file_name=f'serp_data_{today_date}.csv'
     )
-
-    #Step 7
-    file_path = "Pipeline/NAPQUEEN.csv"
-    scrapper_handler(final_combined_data,file_path)
-
-    # Save the updated NAPQUEEN.csv to S3
-    save_df_to_s3(
-        df=pd.read_csv(file_path, on_bad_lines='skip'),  # Load the updated file into a DataFrame
-        bucket_name='anarix-cpi',
-        s3_folder=f'{brand}/',
-        file_name='NAPQUEEN.csv'
-    )
-
-    logger.info(f"Uploaded {file_path} to S3 bucket 'anarix-cpi' in folder '{brand}/'")
-
-    df_scrapped_info = pd.read_csv(file_path ,on_bad_lines='skip')
-    df = product_details_merge_data(final_combined_data, df_scrapped_info)
     
-    today_date = datetime.now().strftime('%Y-%m-%d')
-    file_name = f'merged_data_{today_date}.csv'
+    updated_napqueen_df = scrapper_handler(
+    df=final_combined_data,
+    bucket_name="anarix-cpi",
+    brand="NAPQUEEN",
+    file_name="NAPQUEEN.csv"
+)
 
-    #df.to_csv(file_name,index=False)
-    
-    save_df_to_s3(
-        df=df,
-        bucket_name='anarix-cpi',
-        s3_folder=f'{brand}/',
-        file_name=file_name
-    )
+    # Step 5: Merge with scrapped info for final output
+    final_merged_df = product_details_merge_data(final_combined_data, updated_napqueen_df)
 
-    # merged_df = process_and_upload_analysis(
+    # #Step 7
+    # file_path = "Pipeline/NAPQUEEN.csv"
+    # scrapper_handler(final_combined_data,file_path)
+
+    # # Save the updated NAPQUEEN.csv to S3
+    # save_df_to_s3(
+    #     df=pd.read_csv(file_path, on_bad_lines='skip'),  # Load the updated file into a DataFrame
     #     bucket_name='anarix-cpi',
-    #     new_analysis_df=df,
-    #     prefix="merged_data_",
-    #     file_extension=".csv"
+    #     s3_folder=f'{brand}/',
+    #     file_name='NAPQUEEN.csv'
     # )
+
+    # logger.info(f"Uploaded {file_path} to S3 bucket 'anarix-cpi' in folder '{brand}/'")
+
+    # df_scrapped_info = pd.read_csv(file_path ,on_bad_lines='skip')
+    # df = product_details_merge_data(final_combined_data, df_scrapped_info)
+    
+    # today_date = datetime.now().strftime('%Y-%m-%d')
+    # file_name = f'merged_data_{today_date}.csv'
+
+    # #df.to_csv(file_name,index=False)
+    
+    # save_df_to_s3(
+    #     df=df,
+    #     bucket_name='anarix-cpi',
+    #     s3_folder=f'{brand}/',
+    #     file_name=file_name
+    # )
+
+    merged_df = process_and_upload_analysis(
+        bucket_name='anarix-cpi',
+        new_analysis_df=final_merged_df,
+        prefix="merged_data_",
+        file_extension=".csv"
+    )
 
     query_and_save_to_s3(brand=brand)
     

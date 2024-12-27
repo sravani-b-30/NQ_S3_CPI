@@ -970,6 +970,8 @@ if __name__ == '__main__':
         s3_folder=f'{brand}/',
         file_name=f'serp_data_{today_date}.csv'
     )
+
+    query_and_save_to_s3(brand=brand)
     
     updated_napqueen_df = scrapper_handler(
     df=final_combined_data,
@@ -1016,8 +1018,6 @@ if __name__ == '__main__':
         prefix="merged_data_",
         file_extension=".csv"
     )
-
-    query_and_save_to_s3(brand=brand)
     
     logger.info(f"Completed processing for brand: {brand}\n")
     

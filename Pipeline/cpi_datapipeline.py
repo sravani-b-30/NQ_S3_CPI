@@ -957,7 +957,7 @@ if __name__ == '__main__':
 
     df_product_data = fetch_and_merge_product_data(df_serp)
 
-    start_date = '2024-12-20'
+    start_date = datetime.now().date() - timedelta(days=1)
     end_date = datetime.now().date()
     sp_api_data = fetch_and_enrich_price_data_by_date_range(start_date, end_date)
 

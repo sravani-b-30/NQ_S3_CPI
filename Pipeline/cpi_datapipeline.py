@@ -379,7 +379,7 @@ def fetch_serp_data(updated_df):
     conn = pg8000.connect(**db_config)
     cursor = conn.cursor()
 
-    start_date = datetime.now().date() - timedelta(days=6)
+    start_date = datetime.now().date() - timedelta(days=7)
     end_date = datetime.now().date()
     logger.info(f"Fetching SERP data from {start_date} to {end_date}")
     
@@ -780,7 +780,7 @@ def query_and_save_to_s3(brand):
         file_name=file_name_
     )
     
-    logger.info(f"Data for {brand} successfully queried and saved to S3 as {file_name}")
+    logger.info(f"Data for {brand} successfully queried and saved to S3 as {file_name_}")
 
     # Close the cursor and connection
     cursor.close()
@@ -924,7 +924,7 @@ if __name__ == '__main__':
     logger.info(f"Uploaded {file_path} to S3 bucket 'anarix-cpi' in folder '{brand}/'")
 
     df_scrapped_info = pd.read_csv(file_path ,on_bad_lines='skip')
-    df = product_details_merge_data(df, df_scrapped_info)
+    df = product_details_merge_data(final_combined_data, df_scrapped_info)
     
     today_date = datetime.now().strftime('%Y-%m-%d')
     file_name = f'merged_data_{today_date}.csv'

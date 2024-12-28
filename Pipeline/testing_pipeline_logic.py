@@ -148,8 +148,8 @@ def fetch_serp_data(updated_df):
     conn = pg8000.connect(**db_config)
     cursor = conn.cursor()
 
-    start_date = datetime.now().date() - timedelta(days=6)
-    end_date = datetime.now().date()
+    end_date = datetime.now().date() + timedelta(days=1)
+    start_date = end_date - timedelta(days=1)
     logger.info(f"Fetching SERP data from {start_date} to {end_date}")
 
     dataframes = []
@@ -326,13 +326,23 @@ if __name__ == '__main__':
     df_serp = fetch_serp_data(df_keywords)
 
     df_product_data = fetch_and_merge_product_data(df_serp)
-
-    start_date = '2024-12-20'
-    end_date = datetime.now().date()
+    
+    end_date = datetime.now().date() + timedelta(days=1)
+    start_date = end_date - timedelta(days=1)
     sp_api_data = fetch_and_enrich_price_data_by_date_range(start_date, end_date)
 
     final_combined_data = align_and_combine_serp_and_sp_api_data(df_product_data, sp_api_data)
-    final_combined_data.to_csv("final_combined_data.csv", index=False)
+    final_combined_data.to_csv("serp_sp_api_data_27th.csv", index=False)
+
+    # Rename 'asin' to 'ASIN' in df to match df_scrapped_info column
+    # final_combined_data.rename(columns={'asin': 'ASIN'}, inplace=True)
+    # df_scrapped_info = pd.read_csv("NAPQUEEN (3).csv", on_bad_lines='skip')
+
+    # # Merge the DataFrames on the 'ASIN' column
+    # merged_df = pd.merge(final_combined_data, df_scrapped_info, on='ASIN', how='left')
+    
+    # merged_df.to_csv("merged_data_26_27.csv", index=False)
+
 
     # save_df_to_s3(
     #     df=final_combined_data,  # Load the updated file into a DataFrame

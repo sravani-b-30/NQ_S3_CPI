@@ -879,7 +879,7 @@ def scrapper_handler(df, bucket_name, brand, file_name="NAPQUEEN.csv", num_worke
 
     return updated_df
 
-def fetch_latest_file_from_s3(bucket_name, prefix="merged_data_", file_extension=".csv"):
+def fetch_latest_file_from_s3(bucket_name, prefix="NAPQUEEN/merged_data_", file_extension=".csv"):
     """
     Fetches the latest file matching the prefix and extension from the S3 bucket.
     """
@@ -897,17 +897,19 @@ def fetch_latest_file_from_s3(bucket_name, prefix="merged_data_", file_extension
     latest_file = max(files, key=lambda x: x['LastModified'])
     return latest_file['Key'], latest_file['LastModified']
 
-def process_and_upload_analysis(bucket_name, new_analysis_df, prefix="merged_data_", file_extension=".csv"):
+def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="merged_data_", file_extension=".csv"):
     """
     Processes daily analysis results, checks the file's date, and appends or creates a new file based on month difference.
     """
     import io
     today = datetime.now()
     s3_client = boto3.client('s3')
+    
+    folder_path = f"{brand}/"
 
     # Step 1: Fetch the latest file
     try:
-        latest_file_key, last_modified = fetch_latest_file_from_s3(bucket_name, prefix, file_extension)
+        latest_file_key, last_modified = fetch_latest_file_from_s3(bucket_name, prefix=folder_path + prefix, file_extension=file_extension)
         logger.info(f"Latest file found: {latest_file_key}, LastModified: {last_modified}")
     except FileNotFoundError:
         # If no files exist, create a new one
@@ -936,7 +938,7 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, prefix="merged_dat
         updated_df = new_analysis_df
 
     # Step 4: Upload the updated DataFrame directly to S3
-    new_file_name = f"{prefix}{today.strftime('%Y-%m-%d')}{file_extension}"
+    new_file_name = f"{folder_path}{prefix}{today.strftime('%Y-%m-%d')}{file_extension}"
     csv_buffer = io.StringIO()
     updated_df.to_csv(csv_buffer, index=False)
     s3_client.put_object(Bucket=bucket_name, Key=new_file_name, Body=csv_buffer.getvalue())
@@ -1015,6 +1017,7 @@ if __name__ == '__main__':
     merged_df = process_and_upload_analysis(
         bucket_name='anarix-cpi',
         new_analysis_df=final_merged_df,
+        brand=brand,
         prefix="merged_data_",
         file_extension=".csv"
     )

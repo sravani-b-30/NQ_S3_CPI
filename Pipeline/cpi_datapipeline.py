@@ -380,8 +380,8 @@ def fetch_serp_data(updated_df):
     conn = pg8000.connect(**db_config)
     cursor = conn.cursor()
 
-    end_date = datetime.now().date() #+ timedelta(days=1)
-    start_date = end_date - timedelta(days=4)
+    end_date = datetime.now().date() + timedelta(days=1)
+    start_date = end_date - timedelta(days=5)
     logger.info(f"Fetching SERP data from {start_date} to {end_date}")
     
     dataframes = []
@@ -409,7 +409,7 @@ def fetch_serp_data(updated_df):
     merged_df = pd.merge(updated_df, all_data_df, on='keyword_id')
     logger.info(f"Length of serp data before removing all the occurrences : {len(merged_df['product_id'])}")
     filtered_df = filter_last_occurrence_by_day(merged_df)
-    logger.info(f"Length of serp data after removing all the occurrences : {len(merged_df['product_id'])}")
+    logger.info(f"Length of serp data after removing all the occurrences : {len(filtered_df['product_id'])}")
     logger.info("Step-2 : Processed SERP data.")
     return filtered_df
 
@@ -500,8 +500,8 @@ def align_and_combine_serp_and_sp_api_data(serp_data, sp_api_data):
     combined_data['date'] = pd.to_datetime(combined_data['date']).dt.date
     combined_data = combined_data.sort_values(by=['asin', 'date'], ascending=[True, True])
     deduplicated_data = combined_data.groupby(['asin', 'date'], as_index=False).last()
-    logger.info(f"Length of ASINs after removing duplicates at day level after combining data : {len(combined_data['asin'])}")
-    logger.info(f"Length of ASINs after removing duplicates: {len(deduplicated_data['asin'])}")
+    logger.info(f"Length of ASINs after removing duplicates at day level after combining data : {len(deduplicated_data['asin'])}")
+    #logger.info(f"Length of ASINs after removing duplicates: {len(deduplicated_data['asin'])}")
     logger.info("Step-5 : Combined and deduplicated SERP and SP API data in the final step.")
 
     asin_keyword_df = deduplicated_data.groupby('asin')['keyword_id'].apply(lambda x: list(set(x))).reset_index()
@@ -860,12 +860,13 @@ def scrapper_handler(df, bucket_name, brand, file_name="NAPQUEEN.csv", num_worke
         try:
             parallel_scrape(asins, num_workers, file_name)
 
-            # Load the updated file after scraping
-            updated_df = pd.read_csv(file_name, on_bad_lines='skip')
-            logger.info("Scraping completed and data appended to s3 bucket file.")
+            # Load the updated local file after scraping
+            scraped_data = pd.read_csv(file_name, on_bad_lines='skip')
+            updated_df = pd.concat([existing_df, scraped_data], ignore_index=True)
+            logger.info("Scraping completed and data appended to the S3 file.")
         except Exception as e:
             logger.error(f"Error during parallel scraping: {e}")
-            updated_df = existing_df 
+            updated_df = existing_df  # Use existing data if scraping fails
     else:
         logger.info("No new ASINs to scrape.")
         updated_df = existing_df
@@ -921,21 +922,27 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
         # Load the file into a DataFrame directly from S3
         obj = s3_client.get_object(Bucket=bucket_name, Key=latest_file_key)
         existing_df = pd.read_csv(io.BytesIO(obj['Body'].read()))
-        
-        # Extract the date from the file name
-        file_date_str = latest_file_key.split('_')[-1].split('.')[0]
-        file_date = datetime.strptime(file_date_str, '%Y-%m-%d')
-
-        # Step 3: Compare months
-        if today.month == file_date.month and today.year == file_date.year:
-            logger.info("Same month. Appending to the existing file.")
-            updated_df = pd.concat([existing_df, new_analysis_df], ignore_index=True)
-        else:
-            logger.info("Different month. Creating a new file.")
-            updated_df = new_analysis_df
+        updated_df = pd.concat([existing_df, new_analysis_df], ignore_index=True)
+        logging.info(f"Appended serp data to the existig file : {updated_df.info()}")
     else:
-        # No existing file, start fresh
+        # No existing file, start fresh with the new analysis data
         updated_df = new_analysis_df
+        logging.info(f"Creating new file for sepr data as no existing file found : {updated_df.info()}")
+        
+    #     # Extract the date from the file name
+    #     file_date_str = latest_file_key.split('_')[-1].split('.')[0]
+    #     file_date = datetime.strptime(file_date_str, '%Y-%m-%d')
+
+    #     # Step 3: Compare months
+    #     if today.month == file_date.month and today.year == file_date.year:
+    #         logger.info("Same month. Appending to the existing file.")
+    #         updated_df = pd.concat([existing_df, new_analysis_df], ignore_index=True)
+    #     else:
+    #         logger.info("Different month. Creating a new file.")
+    #         updated_df = new_analysis_df
+    # else:
+    #     # No existing file, start fresh
+    #     updated_df = new_analysis_df
 
     # Step 4: Upload the updated DataFrame directly to S3
     new_file_name = f"{folder_path}{prefix}{today.strftime('%Y-%m-%d')}{file_extension}"
@@ -958,8 +965,8 @@ if __name__ == '__main__':
 
     df_product_data = fetch_and_merge_product_data(df_serp)
 
-    end_date = datetime.now().date() #+ timedelta(days=1)
-    start_date = end_date - timedelta(days=4)
+    end_date = datetime.now().date() + timedelta(days=1)
+    start_date = end_date - timedelta(days=5)
     sp_api_data = fetch_and_enrich_price_data_by_date_range(start_date, end_date)
 
     final_combined_data = align_and_combine_serp_and_sp_api_data(df_product_data, sp_api_data)
@@ -1021,7 +1028,7 @@ if __name__ == '__main__':
     )
     
     query_and_save_to_s3(brand=brand)
-    
+
     logger.info(f"Completed processing for brand: {brand}\n")
     
 

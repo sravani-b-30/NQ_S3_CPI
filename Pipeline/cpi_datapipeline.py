@@ -380,8 +380,8 @@ def fetch_serp_data(updated_df):
     conn = pg8000.connect(**db_config)
     cursor = conn.cursor()
 
-    end_date = datetime.now().date() + timedelta(days=1)
-    start_date = end_date - timedelta(days=1)
+    end_date = datetime.now().date() #+ timedelta(days=1)
+    start_date = end_date - timedelta(days=4)
     logger.info(f"Fetching SERP data from {start_date} to {end_date}")
     
     dataframes = []
@@ -958,8 +958,8 @@ if __name__ == '__main__':
 
     df_product_data = fetch_and_merge_product_data(df_serp)
 
-    end_date = datetime.now().date() + timedelta(days=1)
-    start_date = end_date - timedelta(days=1)
+    end_date = datetime.now().date() #+ timedelta(days=1)
+    start_date = end_date - timedelta(days=4)
     sp_api_data = fetch_and_enrich_price_data_by_date_range(start_date, end_date)
 
     final_combined_data = align_and_combine_serp_and_sp_api_data(df_product_data, sp_api_data)
@@ -972,15 +972,13 @@ if __name__ == '__main__':
         s3_folder=f'{brand}/',
         file_name=f'serp_data_{today_date}.csv'
     )
-
-    query_and_save_to_s3(brand=brand)
     
     updated_napqueen_df = scrapper_handler(
     df=final_combined_data,
     bucket_name="anarix-cpi",
     brand="NAPQUEEN",
     file_name="NAPQUEEN.csv"
-)
+    )
 
     # Step 5: Merge with scrapped info for final output
     final_merged_df = product_details_merge_data(final_combined_data, updated_napqueen_df)
@@ -1021,6 +1019,8 @@ if __name__ == '__main__':
         prefix="merged_data_",
         file_extension=".csv"
     )
+    
+    query_and_save_to_s3(brand=brand)
     
     logger.info(f"Completed processing for brand: {brand}\n")
     

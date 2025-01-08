@@ -644,18 +644,19 @@ def query_and_save_to_s3(brand):
                   WHERE sp_advertised_product_report.anarix_id::text = 'NAPQUEEN'
                   GROUP BY sp_advertised_product_report.date, sp_advertised_product_report."advertisedAsin", sp_advertised_product_report.anarix_id
                 ), manufacturing_sales AS (
-                 SELECT vendor_real_time_sales_day_wise_with_shipped_data.shipped_date,
-                    vendor_real_time_sales_day_wise_with_shipped_data.asin,
-                    vendor_real_time_sales_day_wise_with_shipped_data.anarix_id,
-                    sum(vendor_real_time_sales_day_wise_with_shipped_data.shipped_units) AS shippedunits,
-                    sum(vendor_real_time_sales_day_wise_with_shipped_data."shipped_revenue.amount") AS shippedrevenueamount,
-                    sum(vendor_real_time_sales_day_wise_with_shipped_data.ordered_units) AS orderedunits,
-                    sum(vendor_real_time_sales_day_wise_with_shipped_data."ordered_revenue.amount"::numeric(20,2)) AS orderedrevenueamount,
-                    vendor_real_time_sales_day_wise_with_shipped_data.distributor_view
-                   FROM selling_partner_api.vendor_real_time_sales_day_wise_with_shipped_data
-                  WHERE vendor_real_time_sales_day_wise_with_shipped_data.distributor_view = 'MANUFACTURING'::text
-                  and vendor_real_time_sales_day_wise_with_shipped_data.anarix_id = 'NAPQUEEN'
-                  GROUP BY vendor_real_time_sales_day_wise_with_shipped_data.shipped_date, vendor_real_time_sales_day_wise_with_shipped_data.asin, vendor_real_time_sales_day_wise_with_shipped_data.anarix_id, vendor_real_time_sales_day_wise_with_shipped_data.distributor_view
+                 SELECT vendor_real_time_sales_day_wise_with_shipped_data_ehd.shipped_date,
+                    vendor_real_time_sales_day_wise_with_shipped_data_ehd.asin,
+                    vendor_real_time_sales_day_wise_with_shipped_data_ehd.anarix_id,
+                    sum(vendor_real_time_sales_day_wise_with_shipped_data_ehd.shipped_units) AS shippedunits,
+                    sum(vendor_real_time_sales_day_wise_with_shipped_data_ehd."shipped_revenue.amount") AS shippedrevenueamount,
+                    sum(vendor_real_time_sales_day_wise_with_shipped_data_ehd.ordered_units) AS orderedunits,
+                    sum(vendor_real_time_sales_day_wise_with_shipped_data_ehd."ordered_revenue.amount"::numeric(20,2)) AS orderedrevenueamount,
+                    vendor_real_time_sales_day_wise_with_shipped_data_ehd.distributor_view
+                   FROM selling_partner_api.vendor_real_time_sales_day_wise_with_shipped_data_ehd
+                  WHERE vendor_real_time_sales_day_wise_with_shipped_data_ehd.distributor_view = 'MANUFACTURING'::text
+                  and vendor_real_time_sales_day_wise_with_shipped_data_ehd.anarix_id = 'NAPQUEEN'
+                  GROUP BY vendor_real_time_sales_day_wise_with_shipped_data_ehd.shipped_date, vendor_real_time_sales_day_wise_with_shipped_data_ehd.asin, 
+                  vendor_real_time_sales_day_wise_with_shipped_data_ehd.anarix_id, vendor_real_time_sales_day_wise_with_shipped_data_ehd.distributor_view
                 ), seller_ads_sb AS (
                  SELECT sb_ads.date,
                     COALESCE(x1.asin, 'SB_ASIN_BLANK'::character varying) AS asin,

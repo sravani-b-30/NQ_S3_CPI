@@ -380,7 +380,7 @@ def fetch_serp_data(updated_df):
     conn = pg8000.connect(**db_config)
     cursor = conn.cursor()
 
-    end_date = datetime.now().date() + timedelta(days=1)
+    end_date = datetime.now().date() 
     start_date = end_date - timedelta(days=1)
     logger.info(f"Fetching SERP data from {start_date} to {end_date}")
     
@@ -904,7 +904,7 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
     Processes daily analysis results, checks the file's date, and appends or creates a new file based on month difference.
     """
     import io
-    today = datetime.now()
+    today = datetime.now() - timedelta(days=1)
     s3_client = boto3.client('s3')
     
     folder_path = f"{brand}/"
@@ -930,21 +930,6 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
         updated_df = new_analysis_df
         logging.info(f"Creating new file for sepr data as no existing file found : {updated_df.info()}")
         
-    #     # Extract the date from the file name
-    #     file_date_str = latest_file_key.split('_')[-1].split('.')[0]
-    #     file_date = datetime.strptime(file_date_str, '%Y-%m-%d')
-
-    #     # Step 3: Compare months
-    #     if today.month == file_date.month and today.year == file_date.year:
-    #         logger.info("Same month. Appending to the existing file.")
-    #         updated_df = pd.concat([existing_df, new_analysis_df], ignore_index=True)
-    #     else:
-    #         logger.info("Different month. Creating a new file.")
-    #         updated_df = new_analysis_df
-    # else:
-    #     # No existing file, start fresh
-    #     updated_df = new_analysis_df
-
     # Step 4: Upload the updated DataFrame directly to S3
     new_file_name = f"{folder_path}{prefix}{today.strftime('%Y-%m-%d')}{file_extension}"
     csv_buffer = io.StringIO()
@@ -966,7 +951,7 @@ if __name__ == '__main__':
 
     df_product_data = fetch_and_merge_product_data(df_serp)
 
-    end_date = datetime.now().date() + timedelta(days=1)
+    end_date = datetime.now().date()
     start_date = end_date - timedelta(days=1)
     sp_api_data = fetch_and_enrich_price_data_by_date_range(start_date, end_date)
 

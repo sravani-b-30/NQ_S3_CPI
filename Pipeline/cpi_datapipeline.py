@@ -380,8 +380,11 @@ def fetch_serp_data(updated_df):
     conn = pg8000.connect(**db_config)
     cursor = conn.cursor()
 
-    end_date = datetime.now().date() 
+    # end_date = datetime.now().date() 
+    # start_date = end_date - timedelta(days=1)
+    end_date = datetime.now().date() - timedelta(days=20)
     start_date = end_date - timedelta(days=1)
+
     logger.info(f"Fetching SERP data from {start_date} to {end_date}")
     
     dataframes = []
@@ -904,7 +907,7 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
     Processes daily analysis results, checks the file's date, and appends or creates a new file based on month difference.
     """
     import io
-    today = datetime.now() - timedelta(days=1)
+    today = datetime.now() - timedelta(days=5)
     s3_client = boto3.client('s3')
     
     folder_path = f"{brand}/"
@@ -951,7 +954,9 @@ if __name__ == '__main__':
 
     df_product_data = fetch_and_merge_product_data(df_serp)
 
-    end_date = datetime.now().date()
+    # end_date = datetime.now().date()
+    # start_date = end_date - timedelta(days=1)
+    end_date = datetime.now().date() - timedelta(days=20)
     start_date = end_date - timedelta(days=1)
     sp_api_data = fetch_and_enrich_price_data_by_date_range(start_date, end_date)
 

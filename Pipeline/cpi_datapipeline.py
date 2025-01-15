@@ -13,6 +13,7 @@ import certifi
 import logging
 from decimal import Decimal
 import io
+import pytz
 
 # Set up logging
 logging.basicConfig(
@@ -516,7 +517,10 @@ def align_and_combine_serp_and_sp_api_data(serp_data, sp_api_data):
 
     combined_data = pd.concat([serp_data, sp_api_data], ignore_index=True)
     logger.info(f"Length of ASINs before removing duplicates at day level after combining data : {len(combined_data['asin'])}")
+    combined_data['date'] = combined_data['date'].apply(lambda x: x.tz_localize(None) if x.tzinfo is not None else x)
     combined_data['date'] = pd.to_datetime(combined_data['date']).dt.date
+    logging.info(combined_data['date'].head())
+    logging.info(combined_data['date'].apply(lambda x: x.tzinfo).value_counts())
     combined_data = combined_data.sort_values(by=['asin', 'date'], ascending=[True, True])
     deduplicated_data = combined_data.groupby(['asin', 'date'], as_index=False).last()
     logger.info(f"Length of ASINs after removing duplicates at day level after combining data : {len(deduplicated_data['asin'])}")

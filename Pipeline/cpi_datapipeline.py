@@ -380,7 +380,7 @@ def fetch_serp_data(updated_df):
     conn = pg8000.connect(**db_config)
     cursor = conn.cursor()
 
-    end_date = datetime.now().date() - timedelta(days=21)
+    end_date = datetime.now().date() - timedelta(days=5)
     start_date = end_date - timedelta(days=1)
 
     logger.info(f"Fetching SERP data from {start_date} to {end_date}")
@@ -466,7 +466,7 @@ def fetch_and_enrich_price_data_by_date_range():
         # """
         # cursor.execute(query, (start_date, end_date))
         # price_data = pd.DataFrame(cursor.fetchall(), columns=[desc[0] for desc in cursor.description])
-        price_data = pd.read_csv("Pipeline/sp_api_24_23_dec.csv")
+        price_data = pd.read_csv("Pipeline/sp_api_09_10_jan.csv")
 
         price_data['date'] = pd.to_datetime(price_data['date']).dt.date
         unique_dates = price_data['date'].unique()
@@ -479,14 +479,14 @@ def fetch_and_enrich_price_data_by_date_range():
         logger.info("Frequency of dates in the dataframe:")
         logger.info(date_counts)
 
-        filtered_data = price_data[price_data['date'] == pd.to_datetime('2024-12-23').date()]
+        filtered_data = price_data[price_data['date'] == pd.to_datetime('2025-01-09').date()]
 
         # Display the filtered dataframe
-        logger.info(f"Filtered data for 23rd December 2024:")
+        logger.info(f"Filtered data for 9th January 2025:")
         logger.info(filtered_data.head())
 
         # Optionally, check the number of rows in the filtered dataframe
-        logger.info(f"Number of rows for 23rd December 2024: {len(filtered_data)}")
+        logger.info(f"Number of rows for 9th January 2025: {len(filtered_data)}")
 
         # cursor.close()
         # conn.close()

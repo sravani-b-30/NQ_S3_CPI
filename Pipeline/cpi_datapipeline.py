@@ -480,14 +480,14 @@ def fetch_and_enrich_price_data_by_date_range():
         logger.info("Frequency of dates in the dataframe:")
         logger.info(date_counts)
 
-        filtered_data = price_data[price_data['date'] == pd.to_datetime('2025-01-09').date()]
+        filtered_data = price_data[price_data['date'] == pd.to_datetime('2025-01-10').date()]
 
         # Display the filtered dataframe
-        logger.info(f"Filtered data for 9th January 2025:")
+        logger.info(f"Filtered data for 10th January 2025:")
         logger.info(filtered_data.head())
 
         # Optionally, check the number of rows in the filtered dataframe
-        logger.info(f"Number of rows for 9th January 2025: {len(filtered_data)}")
+        logger.info(f"Number of rows for 10th January 2025: {len(filtered_data)}")
 
         # cursor.close()
         # conn.close()

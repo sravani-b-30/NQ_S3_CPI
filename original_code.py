@@ -291,6 +291,7 @@ def get_latest_file_from_s3(s3_folder, prefix):
         all_files,
         key=lambda k: s3_client.head_object(Bucket=bucket_name, Key=k)['LastModified']
     )
+    st.write(f"Latest file fetched from S3: {latest_file}")
     return latest_file
 
 @delayed
@@ -322,7 +323,8 @@ def load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix):
     # Load dynamic files with latest dates using delayed Dask tasks
     merged_data_delayed = delayed(load_latest_csv_from_s3(s3_folder, 'merged_data_'))
     merged_data_df = dd.from_delayed([delayed(merged_data_delayed)])
-    #st.write("Latest merged_data file name loaded:", merged_data_df.head())
+    st.write("Latest merged_data file name loaded:", merged_data_df.head())
+    st.write(merged_data_df.info())
 
     merged_data_df = merged_data_df.rename(columns={"title": "product_title"})
     merged_data_df['ASIN'] = merged_data_df['ASIN'].str.upper()

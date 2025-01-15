@@ -466,7 +466,7 @@ def fetch_and_enrich_price_data_by_date_range():
         # """
         # cursor.execute(query, (start_date, end_date))
         # price_data = pd.DataFrame(cursor.fetchall(), columns=[desc[0] for desc in cursor.description])
-        price_data = pd.read_csv("Pipeline\sp_api_24_23_dec.csv")
+        price_data = pd.read_csv("Pipeline/sp_api_24_23_dec.csv")
 
         price_data['date'] = pd.to_datetime(price_data['date']).dt.date
         unique_dates = price_data['date'].unique()

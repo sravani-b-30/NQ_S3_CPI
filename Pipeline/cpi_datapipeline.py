@@ -514,6 +514,9 @@ def align_and_combine_serp_and_sp_api_data(serp_data, sp_api_data):
 
     serp_data = serp_data[required_columns]
     sp_api_data = sp_api_data[required_columns]
+    
+    serp_data['date'] = pd.to_datetime(serp_data['date'], errors='coerce').dt.tz_localize(None)
+    sp_api_data['date'] = pd.to_datetime(sp_api_data['date'], errors='coerce').dt.tz_localize(None)
 
     combined_data = pd.concat([serp_data, sp_api_data], ignore_index=True)
     logger.info(f"Length of ASINs before removing duplicates at day level after combining data : {len(combined_data['asin'])}")

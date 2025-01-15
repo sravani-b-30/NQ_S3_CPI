@@ -324,7 +324,7 @@ def load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix):
 
     latest_file_key = get_latest_file_from_s3(s3_folder, 'merged_data_')  # Fetch and log the file name
     st.write(f"Latest merged_data file fetched: {latest_file_key}") 
-    
+
     merged_data_delayed = delayed(load_latest_csv_from_s3(s3_folder, 'merged_data_'))
     merged_data_df = dd.from_delayed([delayed(merged_data_delayed)])
     st.write("Latest merged_data file name loaded:", merged_data_df.head())
@@ -954,7 +954,11 @@ def process_date(merged_data_df, asin, date_str, price_min, price_max, compulsor
     This function processes data for a single date and returns the results.
     """
     df_combined = merged_data_df.copy()
-    df_combined['date'] = pd.to_datetime(df_combined['date'], format='%Y-%m-%d')
+    #df_combined['date'] = pd.to_datetime(df_combined['date'], format='%Y-%m-%d', errors='coerce')
+    df_combined['date'] = pd.to_datetime(df_combined['date'], errors='coerce')
+
+    # Reformat the dates to '%Y-%m-%d' (this is optional as datetime objects support the desired format directly)
+    df_combined['date'] = df_combined['date'].dt.strftime('%Y-%m-%d')
     df_current_day = df_combined[df_combined['date'] == date_str]
 
     #st.write(f"Data for {date_str}:")

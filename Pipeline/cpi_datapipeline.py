@@ -381,8 +381,8 @@ def fetch_serp_data(updated_df):
     conn = pg8000.connect(**db_config)
     cursor = conn.cursor()
 
-    end_date = datetime.now().date()
-    start_date = end_date - timedelta(days=5)
+    end_date = datetime.now().date() - timedelta(days=4)
+    start_date = end_date - timedelta(days=1)
 
     logger.info(f"Fetching SERP data from {start_date} to {end_date}")
     
@@ -458,45 +458,45 @@ def fetch_and_enrich_price_data_by_date_range():
     Fetches and enriches data from sp_api_price_collector within a specific date range.
     """
     try:
-        conn = pg8000.connect(**DB_CONFIG)
-        cursor = conn.cursor()
-        query = """
-        SELECT date, product_id, asin, product_title, brand, price, availability, keyword_id, keyword
-        FROM serp.sp_api_price_collector
-        WHERE date BETWEEN %s AND %s;
-        """
-        cursor.execute(query, (start_date, end_date))
-        price_data = pd.DataFrame(cursor.fetchall(), columns=[desc[0] for desc in cursor.description])
-        # price_data = pd.read_csv("Pipeline/sp_api_09_10_jan.csv")
+        # conn = pg8000.connect(**DB_CONFIG)
+        # cursor = conn.cursor()
+        # query = """
+        # SELECT date, product_id, asin, product_title, brand, price, availability, keyword_id, keyword
+        # FROM serp.sp_api_price_collector
+        # WHERE date BETWEEN %s AND %s;
+        # """
+        # cursor.execute(query, (start_date, end_date))
+        # price_data = pd.DataFrame(cursor.fetchall(), columns=[desc[0] for desc in cursor.description])
+        price_data = pd.read_csv("Pipeline/sp_api_09_10_jan.csv")
 
-        # price_data['date'] = pd.to_datetime(price_data['date']).dt.date
-        # unique_dates = price_data['date'].unique()
-        # logger.info(f"Printing unique dates from sp_api dataframe")
-        # logger.info(sorted(unique_dates))
+        price_data['date'] = pd.to_datetime(price_data['date']).dt.date
+        unique_dates = price_data['date'].unique()
+        logger.info(f"Printing unique dates from sp_api dataframe")
+        logger.info(sorted(unique_dates))
 
-        # date_counts = price_data['date'].value_counts()
+        date_counts = price_data['date'].value_counts()
 
-        # # Display the counts
-        # logger.info("Frequency of dates in the dataframe:")
-        # logger.info(date_counts)
+        # Display the counts
+        logger.info("Frequency of dates in the dataframe:")
+        logger.info(date_counts)
 
-        # filtered_data = price_data[price_data['date'] == pd.to_datetime('2025-01-09').date()]
+        filtered_data = price_data[price_data['date'] == pd.to_datetime('2025-01-09').date()]
 
-        # # Display the filtered dataframe
-        # logger.info(f"Filtered data for 9th January 2025:")
-        # logger.info(filtered_data.head())
+        # Display the filtered dataframe
+        logger.info(f"Filtered data for 9th January 2025:")
+        logger.info(filtered_data.head())
 
-        # # Optionally, check the number of rows in the filtered dataframe
-        # logger.info(f"Number of rows for 9th January 2025: {len(filtered_data)}")
+        # Optionally, check the number of rows in the filtered dataframe
+        logger.info(f"Number of rows for 9th January 2025: {len(filtered_data)}")
 
-        cursor.close()
-        conn.close()
+        # cursor.close()
+        # conn.close()
 
         # enriched_data = pd.concat(enriched_data_list, ignore_index=True)
         logger.info("Fetched SP API price data and converted date column to datetime format.")
         logger.info("Step-4 : Processed SP-API Data")
-        return price_data
-        # return filtered_data
+        #return price_data
+        return filtered_data
     except Exception as e:
         logger.error(f"Error fetching SP-API data: {e}")
         raise
@@ -517,10 +517,7 @@ def align_and_combine_serp_and_sp_api_data(serp_data, sp_api_data):
 
     combined_data = pd.concat([serp_data, sp_api_data], ignore_index=True)
     logger.info(f"Length of ASINs before removing duplicates at day level after combining data : {len(combined_data['asin'])}")
-    combined_data['date'] = combined_data['date'].apply(lambda x: x.tz_localize(None) if x.tzinfo is not None else x)
     combined_data['date'] = pd.to_datetime(combined_data['date']).dt.date
-    logging.info(combined_data['date'].head())
-    logging.info(combined_data['date'].apply(lambda x: x.tzinfo).value_counts())
     combined_data = combined_data.sort_values(by=['asin', 'date'], ascending=[True, True])
     deduplicated_data = combined_data.groupby(['asin', 'date'], as_index=False).last()
     logger.info(f"Length of ASINs after removing duplicates at day level after combining data : {len(deduplicated_data['asin'])}")
@@ -927,7 +924,7 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
     Processes daily analysis results, checks the file's date, and appends or creates a new file based on month difference.
     """
     import io
-    today = datetime.now()
+    today = datetime.now() - timedelta(days=5)
     s3_client = boto3.client('s3')
     
     folder_path = f"{brand}/"

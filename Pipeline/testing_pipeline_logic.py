@@ -148,8 +148,8 @@ def fetch_serp_data(updated_df):
     conn = pg8000.connect(**db_config)
     cursor = conn.cursor()
 
-    end_date = datetime.now().date() + timedelta(days=1)
-    start_date = end_date - timedelta(days=1)
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=8)
     logger.info(f"Fetching SERP data from {start_date} to {end_date}")
 
     dataframes = []
@@ -262,10 +262,14 @@ def align_and_combine_serp_and_sp_api_data(serp_data, sp_api_data):
 
     serp_data = serp_data[required_columns]
     sp_api_data = sp_api_data[required_columns]
+    logging.info(f"Data types of SERP and SP-API Date Column :")
+    logging.info(serp_data['date'].dtypes)
+    logging.info(sp_api_data['date'].dtypes)
 
     combined_data = pd.concat([serp_data, sp_api_data], ignore_index=True)
     logger.info(f"Length of ASINs before removing duplicates at day level after combining data : {len(combined_data['asin'])}")
     combined_data['date'] = pd.to_datetime(combined_data['date']).dt.date
+    logging.info(combined_data['date'].head())
     combined_data = combined_data.sort_values(by=['asin', 'date'], ascending=[True, True])
     deduplicated_data = combined_data.groupby(['asin', 'date'], as_index=False).last()
     logger.info(f"Length of ASINs after removing duplicates at day level after combining data : {len(combined_data['asin'])}")
@@ -327,12 +331,12 @@ if __name__ == '__main__':
 
     df_product_data = fetch_and_merge_product_data(df_serp)
     
-    end_date = datetime.now().date() + timedelta(days=1)
-    start_date = end_date - timedelta(days=1)
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=8)
     sp_api_data = fetch_and_enrich_price_data_by_date_range(start_date, end_date)
 
     final_combined_data = align_and_combine_serp_and_sp_api_data(df_product_data, sp_api_data)
-    final_combined_data.to_csv("serp_sp_api_data_27th.csv", index=False)
+    final_combined_data.to_csv("serp_sp_api_data_8-15_jan.csv", index=False)
 
     # Rename 'asin' to 'ASIN' in df to match df_scrapped_info column
     # final_combined_data.rename(columns={'asin': 'ASIN'}, inplace=True)

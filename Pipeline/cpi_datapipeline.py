@@ -935,20 +935,35 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
     s3_client = boto3.client('s3')
     
     folder_path = f"{brand}/"
-
-    # Step 1: Fetch the latest file
-    try:
-        latest_file_key, last_modified = fetch_latest_file_from_s3(bucket_name, prefix=folder_path + prefix, file_extension=file_extension)
-        logger.info(f"Latest file found: {latest_file_key}, LastModified: {last_modified}")
-    except FileNotFoundError:
-        # If no files exist, create a new one
-        latest_file_key = None
-        logger.warning(f"No existing files found. Starting fresh with today's data.")
     
-    # Step 2: Check if file exists
-    if latest_file_key:
-          updated_df = new_analysis_df
-          logging.info(f"Creating new file for sepr data as no existing file found : {updated_df.info()}")
+    # Step 1: Prepare the new file name
+    new_file_name = f"{folder_path}{prefix}{today.strftime('%Y-%m-%d')}{file_extension}"
+    csv_buffer = io.StringIO()
+
+    # Step 2: Save the new analysis DataFrame to the buffer
+    new_analysis_df.to_csv(csv_buffer, index=False)
+    logger.info(f"New file details : {new_analysis_df.info()}")
+
+    # Step 3: Upload the new file to S3
+    try:
+        s3_client.put_object(Bucket=bucket_name, Key=new_file_name, Body=csv_buffer.getvalue())
+        logger.info(f"Uploaded new file: {new_file_name} to S3 bucket: {bucket_name}")
+    except Exception as e:
+        logger.error(f"Failed to upload file {new_file_name} to S3. Error: {e}")
+        raise
+
+    return new_analysis_df
+    # # Step 1: Fetch the latest file
+    # try:
+    #     latest_file_key, last_modified = fetch_latest_file_from_s3(bucket_name, prefix=folder_path + prefix, file_extension=file_extension)
+    #     logger.info(f"Latest file found: {latest_file_key}, LastModified: {last_modified}")
+    # except FileNotFoundError:
+    #     # If no files exist, create a new one
+    #     latest_file_key = None
+    #     logger.warning(f"No existing files found. Starting fresh with today's data.")
+    
+    # # Step 2: Check if file exists
+    # if latest_file_key:
     #     # Load the file into a DataFrame directly from S3
     #     obj = s3_client.get_object(Bucket=bucket_name, Key=latest_file_key)
     #     existing_df = pd.read_csv(io.BytesIO(obj['Body'].read()))
@@ -959,14 +974,14 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
     #     updated_df = new_analysis_df
     #     logging.info(f"Creating new file for sepr data as no existing file found : {updated_df.info()}")
         
-    # Step 4: Upload the updated DataFrame directly to S3
-    new_file_name = f"{folder_path}{prefix}{today.strftime('%Y-%m-%d')}{file_extension}"
-    csv_buffer = io.StringIO()
-    updated_df.to_csv(csv_buffer, index=False)
-    s3_client.put_object(Bucket=bucket_name, Key=new_file_name, Body=csv_buffer.getvalue())
-    logger.info(f"Uploaded file: {new_file_name} to S3 bucket: {bucket_name}")
+    # # Step 4: Upload the updated DataFrame directly to S3
+    # new_file_name = f"{folder_path}{prefix}{today.strftime('%Y-%m-%d')}{file_extension}"
+    # csv_buffer = io.StringIO()
+    # updated_df.to_csv(csv_buffer, index=False)
+    # s3_client.put_object(Bucket=bucket_name, Key=new_file_name, Body=csv_buffer.getvalue())
+    # logger.info(f"Uploaded file: {new_file_name} to S3 bucket: {bucket_name}")
 
-    return updated_df
+    # return updated_df
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()

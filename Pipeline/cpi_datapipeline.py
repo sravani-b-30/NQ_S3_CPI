@@ -382,7 +382,7 @@ def fetch_serp_data(updated_df):
     cursor = conn.cursor()
 
     end_date = datetime.now().date()
-    start_date = end_date - timedelta(days=1)
+    start_date = end_date - timedelta(days=32)
 
     logger.info(f"Fetching SERP data from {start_date} to {end_date}")
     
@@ -931,7 +931,7 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
     Processes daily analysis results, checks the file's date, and appends or creates a new file based on month difference.
     """
     import io
-    today = datetime.now()
+    today = datetime.now() - timedelta(days=1)
     s3_client = boto3.client('s3')
     
     folder_path = f"{brand}/"
@@ -947,15 +947,17 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
     
     # Step 2: Check if file exists
     if latest_file_key:
-        # Load the file into a DataFrame directly from S3
-        obj = s3_client.get_object(Bucket=bucket_name, Key=latest_file_key)
-        existing_df = pd.read_csv(io.BytesIO(obj['Body'].read()))
-        updated_df = pd.concat([existing_df, new_analysis_df], ignore_index=True)
-        logging.info(f"Appended serp data to the existig file : {updated_df.info()}")
-    else:
-        # No existing file, start fresh with the new analysis data
-        updated_df = new_analysis_df
-        logging.info(f"Creating new file for sepr data as no existing file found : {updated_df.info()}")
+          updated_df = new_analysis_df
+          logging.info(f"Creating new file for sepr data as no existing file found : {updated_df.info()}")
+    #     # Load the file into a DataFrame directly from S3
+    #     obj = s3_client.get_object(Bucket=bucket_name, Key=latest_file_key)
+    #     existing_df = pd.read_csv(io.BytesIO(obj['Body'].read()))
+    #     updated_df = pd.concat([existing_df, new_analysis_df], ignore_index=True)
+    #     logging.info(f"Appended serp data to the existig file : {updated_df.info()}")
+    # else:
+    #     # No existing file, start fresh with the new analysis data
+    #     updated_df = new_analysis_df
+    #     logging.info(f"Creating new file for sepr data as no existing file found : {updated_df.info()}")
         
     # Step 4: Upload the updated DataFrame directly to S3
     new_file_name = f"{folder_path}{prefix}{today.strftime('%Y-%m-%d')}{file_extension}"
@@ -979,7 +981,7 @@ if __name__ == '__main__':
     df_product_data = fetch_and_merge_product_data(df_serp)
 
     end_date = datetime.now().date()
-    start_date = end_date - timedelta(days=1)
+    start_date = end_date - timedelta(days=32)
     sp_api_data = fetch_and_enrich_price_data_by_date_range()
 
     final_combined_data = align_and_combine_serp_and_sp_api_data(df_product_data, sp_api_data)

@@ -931,7 +931,7 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
     Processes daily analysis results, checks the file's date, and appends or creates a new file based on month difference.
     """
     import io
-    today = datetime.now() - timedelta(days=1)
+    today = datetime.now() + timedelta(days=1)
     s3_client = boto3.client('s3')
     
     folder_path = f"{brand}/"

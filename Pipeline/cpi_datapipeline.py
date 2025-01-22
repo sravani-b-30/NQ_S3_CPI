@@ -382,7 +382,7 @@ def fetch_serp_data(updated_df):
     cursor = conn.cursor()
 
     end_date = datetime.now().date()
-    start_date = end_date - timedelta(days=32)
+    start_date = end_date - timedelta(days=30)
 
     logger.info(f"Fetching SERP data from {start_date} to {end_date}")
     
@@ -588,6 +588,8 @@ def product_details_merge_data(df, df_scrapped_info):
     # Merge the DataFrames on the 'ASIN' column
     merged_df = pd.merge(df, df_scrapped_info, on='ASIN', how='left')
     logger.info("Process 7: Product Details Merging")
+    logger.info(merged_df.info())
+    logger.info(merged_df.head())
 
     return merged_df
 
@@ -905,6 +907,10 @@ def scrapper_handler(df, bucket_name, brand, file_name="NAPQUEEN.csv", num_worke
         brand=brand,
         file_name=file_name
     )
+    
+    logger.info(f"Scrapped Product Details File : ")
+    logger.info(f"{updated_df.info()}")
+    logger.info(f"{updated_df.head()}")
 
     return updated_df
 
@@ -931,7 +937,7 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
     Processes daily analysis results, checks the file's date, and appends or creates a new file based on month difference.
     """
     import io
-    today = datetime.now() + timedelta(days=1)
+    today = datetime.now()
     s3_client = boto3.client('s3')
     
     folder_path = f"{brand}/"
@@ -939,10 +945,16 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
     # Step 1: Prepare the new file name
     new_file_name = f"{folder_path}{prefix}{today.strftime('%Y-%m-%d')}{file_extension}"
     csv_buffer = io.StringIO()
+    
+    logger.info(f"New Analysis DataFrame Info: {new_analysis_df.info()}")
+    logger.info(f"New Analysis DataFrame Head: {new_analysis_df.head()}")
 
     # Step 2: Save the new analysis DataFrame to the buffer
     new_analysis_df.to_csv(csv_buffer, index=False)
     logger.info(f"New file details : {new_analysis_df.info()}")
+
+    csv_buffer.seek(0)
+    logger.info(f"CSV Buffer Content:\n{csv_buffer.getvalue()}")
 
     # Step 3: Upload the new file to S3
     try:
@@ -996,7 +1008,7 @@ if __name__ == '__main__':
     df_product_data = fetch_and_merge_product_data(df_serp)
 
     end_date = datetime.now().date()
-    start_date = end_date - timedelta(days=32)
+    start_date = end_date - timedelta(days=30)
     sp_api_data = fetch_and_enrich_price_data_by_date_range()
 
     final_combined_data = align_and_combine_serp_and_sp_api_data(df_product_data, sp_api_data)
@@ -1010,6 +1022,9 @@ if __name__ == '__main__':
         file_name=f'serp_data_{today_date}.csv'
     )
     
+    logger.info(f"Final Combined Data: {final_combined_data.info()}")
+    logger.info(f"Final Combined Data (Head): {final_combined_data.head()}")
+
     updated_napqueen_df = scrapper_handler(
     df=final_combined_data,
     bucket_name="anarix-cpi",

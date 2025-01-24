@@ -884,22 +884,23 @@ def scrapper_handler(df, bucket_name, brand, file_name="NAPQUEEN.csv", num_worke
 
     # Run parallel scraping for remaining ASINs
     if asins:
-        logger.info(f"Starting parallel scraping with {num_workers} workers.")
-        # logger.info(f"Retaining old scrapped file")
-        # updated_df = existing_df
-        try:
-            parallel_scrape(asins, num_workers, file_name)
-
-            # Load the updated local file after scraping
-            scraped_data = pd.read_csv(file_name, on_bad_lines='skip')
-            updated_df = pd.concat([existing_df, scraped_data], ignore_index=True)
-            logger.info("Scraping completed and data appended to the S3 file.")
-        except Exception as e:
-            logger.error(f"Error during parallel scraping: {e}")
-            updated_df = existing_df  # Use existing data if scraping fails
-    else:
-        logger.info("No new ASINs to scrape.")
+        # logger.info(f"Starting parallel scraping with {num_workers} workers.")
+        logger.info(f"Retaining old scrapped file")
         updated_df = existing_df
+        logger.info(updated_df.shape)
+    #     try:
+    #         parallel_scrape(asins, num_workers, file_name)
+
+    #         # Load the updated local file after scraping
+    #         scraped_data = pd.read_csv(file_name, on_bad_lines='skip')
+    #         updated_df = pd.concat([existing_df, scraped_data], ignore_index=True)
+    #         logger.info("Scraping completed and data appended to the S3 file.")
+    #     except Exception as e:
+    #         logger.error(f"Error during parallel scraping: {e}")
+    #         updated_df = existing_df  # Use existing data if scraping fails
+    # else:
+    #     logger.info("No new ASINs to scrape.")
+    #     updated_df = existing_df
 
     # Save the updated DataFrame to S3
     save_to_s3(

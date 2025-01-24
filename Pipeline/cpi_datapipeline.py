@@ -958,20 +958,24 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
         existing_df = pd.DataFrame()
         logger.warning(f"No existing merged_data file found. Starting fresh.")
 
-    # Step 2: Drop data older than 30 days (rolling window logic)
+    # Step 2: Ensure `date` column is in datetime format for both DataFrames
     if not existing_df.empty:
-        latest_date_in_data = existing_df['date'].max()  # Assume 'date' column exists and is in datetime format
-        cutoff_date = today.date() - timedelta(days=31)  # Calculate cutoff date
-        existing_df = existing_df[existing_df['date'] >= str(cutoff_date)]  # Retain only last 30 days
+        existing_df['date'] = pd.to_datetime(existing_df['date'])
+
+    new_analysis_df['date'] = pd.to_datetime(new_analysis_df['date'])
+
+    # Step 3: Drop data older than 30 days (rolling window logic)
+    cutoff_date = today.date() - timedelta(days=31)  # Calculate cutoff date
+    if not existing_df.empty:
+        existing_df = existing_df[existing_df['date'] >= cutoff_date]  # Retain only last 30 days
         logger.info(f"Dropped data older than {cutoff_date}. Remaining data shape: {existing_df.shape}")
 
-    # Step 3: Append new data and enforce a rolling 30-day window
+    # Step 4: Append new data to existing DataFrame
     updated_df = pd.concat([existing_df, new_analysis_df], ignore_index=True)
     logger.info(f"Appended new data. Combined DataFrame shape: {updated_df.shape}")
 
-    # Enforce rolling 30-day window again (in case new data spans multiple days)
-    # cutoff_date = today.date() - timedelta(days=30)
-    # updated_df = updated_df[updated_df['date'] >= str(cutoff_date)]
+    # Step 5: Enforce rolling 30-day window after concatenation
+    updated_df = updated_df[updated_df['date'] >= cutoff_date]
     logger.info(f"After enforcing rolling 30-day window, DataFrame shape: {updated_df.shape}")
 
     # Step 4: Upload the updated DataFrame directly to S3

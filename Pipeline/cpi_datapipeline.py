@@ -382,7 +382,7 @@ def fetch_serp_data(updated_df):
     cursor = conn.cursor()
 
     end_date = datetime.now().date()
-    start_date = end_date - timedelta(days=30)
+    start_date = end_date - timedelta(days=3)
 
     logger.info(f"Fetching SERP data from {start_date} to {end_date}")
     
@@ -942,29 +942,49 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
     
     folder_path = f"{brand}/"
     
-    # Step 1: Prepare the new file name
+    # Step 1: Fetch the latest file
+    try:
+        latest_file_key, last_modified = fetch_latest_file_from_s3(
+            bucket_name, prefix=folder_path + prefix, file_extension=file_extension
+        )
+        logger.info(f"Latest file found: {latest_file_key}, LastModified: {last_modified}")
+        # Load the existing file into a DataFrame
+        obj = s3_client.get_object(Bucket=bucket_name, Key=latest_file_key)
+        existing_df = pd.read_csv(io.BytesIO(obj['Body'].read()))
+        logger.info(f"Loaded existing merged_data file with shape: {existing_df.shape}")
+    except FileNotFoundError:
+        # No existing file, start with the new analysis data
+        existing_df = pd.DataFrame()
+        logger.warning(f"No existing merged_data file found. Starting fresh.")
+
+    # Step 2: Drop data older than 30 days (rolling window logic)
+    if not existing_df.empty:
+        latest_date_in_data = existing_df['date'].max()  # Assume 'date' column exists and is in datetime format
+        cutoff_date = today.date() - timedelta(days=30)  # Calculate cutoff date
+        existing_df = existing_df[existing_df['date'] >= str(cutoff_date)]  # Retain only last 30 days
+        logger.info(f"Dropped data older than {cutoff_date}. Remaining data shape: {existing_df.shape}")
+
+    # Step 3: Append new data and enforce a rolling 30-day window
+    updated_df = pd.concat([existing_df, new_analysis_df], ignore_index=True)
+    logger.info(f"Appended new data. Combined DataFrame shape: {updated_df.shape}")
+
+    # Enforce rolling 30-day window again (in case new data spans multiple days)
+    cutoff_date = today.date() - timedelta(days=30)
+    updated_df = updated_df[updated_df['date'] >= str(cutoff_date)]
+    logger.info(f"After enforcing rolling 30-day window, DataFrame shape: {updated_df.shape}")
+
+    # Step 4: Upload the updated DataFrame directly to S3
     new_file_name = f"{folder_path}{prefix}{today.strftime('%Y-%m-%d')}{file_extension}"
     csv_buffer = io.StringIO()
-    
-    logger.info(f"New Analysis DataFrame Info: {new_analysis_df.info()}")
-    logger.info(f"New Analysis DataFrame Head: {new_analysis_df.head()}")
-
-    # Step 2: Save the new analysis DataFrame to the buffer
-    new_analysis_df.to_csv(csv_buffer, index=False)
-    logger.info(f"New file details : {new_analysis_df.info()}")
-
-    csv_buffer.seek(0)
-    logger.info(f"CSV Buffer Content:\n{csv_buffer.getvalue()}")
-
-    # Step 3: Upload the new file to S3
+    updated_df.to_csv(csv_buffer, index=False)
     try:
         s3_client.put_object(Bucket=bucket_name, Key=new_file_name, Body=csv_buffer.getvalue())
-        logger.info(f"Uploaded new file: {new_file_name} to S3 bucket: {bucket_name}")
+        logger.info(f"Uploaded updated file: {new_file_name} to S3 bucket: {bucket_name}")
     except Exception as e:
         logger.error(f"Failed to upload file {new_file_name} to S3. Error: {e}")
         raise
 
-    return new_analysis_df
+    return updated_df
     # # Step 1: Fetch the latest file
     # try:
     #     latest_file_key, last_modified = fetch_latest_file_from_s3(bucket_name, prefix=folder_path + prefix, file_extension=file_extension)
@@ -1008,7 +1028,7 @@ if __name__ == '__main__':
     df_product_data = fetch_and_merge_product_data(df_serp)
 
     end_date = datetime.now().date()
-    start_date = end_date - timedelta(days=30)
+    start_date = end_date - timedelta(days=3)
     sp_api_data = fetch_and_enrich_price_data_by_date_range()
 
     final_combined_data = align_and_combine_serp_and_sp_api_data(df_product_data, sp_api_data)

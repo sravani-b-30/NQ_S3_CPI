@@ -961,7 +961,7 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
     # Step 2: Drop data older than 30 days (rolling window logic)
     if not existing_df.empty:
         latest_date_in_data = existing_df['date'].max()  # Assume 'date' column exists and is in datetime format
-        cutoff_date = today.date() - timedelta(days=30)  # Calculate cutoff date
+        cutoff_date = today.date() - timedelta(days=31)  # Calculate cutoff date
         existing_df = existing_df[existing_df['date'] >= str(cutoff_date)]  # Retain only last 30 days
         logger.info(f"Dropped data older than {cutoff_date}. Remaining data shape: {existing_df.shape}")
 
@@ -970,8 +970,8 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
     logger.info(f"Appended new data. Combined DataFrame shape: {updated_df.shape}")
 
     # Enforce rolling 30-day window again (in case new data spans multiple days)
-    cutoff_date = today.date() - timedelta(days=30)
-    updated_df = updated_df[updated_df['date'] >= str(cutoff_date)]
+    # cutoff_date = today.date() - timedelta(days=30)
+    # updated_df = updated_df[updated_df['date'] >= str(cutoff_date)]
     logger.info(f"After enforcing rolling 30-day window, DataFrame shape: {updated_df.shape}")
 
     # Step 4: Upload the updated DataFrame directly to S3

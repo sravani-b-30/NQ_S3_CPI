@@ -965,7 +965,8 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
     new_analysis_df['date'] = pd.to_datetime(new_analysis_df['date'], errors='coerce')
 
     # Step 3: Drop data older than 30 days (rolling window logic)
-    cutoff_date = today.date() - timedelta(days=31)  # Calculate cutoff date
+    # cutoff_date = today.date() - timedelta(days=31)  # Calculate cutoff date
+    cutoff_date = pd.Timestamp(today.date() - timedelta(days=30))
     if not existing_df.empty:
         existing_df = existing_df[existing_df['date'] >= cutoff_date]  # Retain only last 30 days
         logger.info(f"Dropped data older than {cutoff_date}. Remaining data shape: {existing_df.shape}")

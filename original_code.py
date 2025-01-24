@@ -385,10 +385,15 @@ def load_and_preprocess_data(s3_folder, static_file_name, price_data_prefix):
     
     merged_data_df['Product Details'] = merged_data_df.apply(update_product_details, axis=1)
 
+    merged_data_df['brand'] = merged_data_df['brand'].str.lower()
+
+    # Create a list of unique brand names
+    unique_brands = merged_data_df['brand'].dropna().unique().tolist()
+
     price_data_df = load_latest_csv_from_s3(s3_folder, price_data_prefix).compute()
     #st.write("Loaded price_data_df (napqueen_price_tracker):", price_data_df.head())
         
-    return asin_keyword_df, keyword_id_df, merged_data_df, price_data_df
+    return asin_keyword_df, keyword_id_df, merged_data_df, price_data_df, unique_brands
 
 def clear_cache():
     """Clears the cache for load_and_preprocess_data."""
@@ -402,7 +407,7 @@ def get_data(s3_folder, static_file_name, price_data_prefix, refresh=False):
         st.session_state.last_refresh_time = datetime.now()
     
     # Fetch the data (from cache or fresh)
-    asin_keyword_df, keyword_id_df, merged_data_df, price_data_df = load_and_preprocess_data(
+    asin_keyword_df, keyword_id_df, merged_data_df, price_data_df, unique_brands = load_and_preprocess_data(
         s3_folder, static_file_name, price_data_prefix
     )
     
@@ -411,8 +416,9 @@ def get_data(s3_folder, static_file_name, price_data_prefix, refresh=False):
     st.session_state['keyword_id_df'] = keyword_id_df
     st.session_state['merged_data_df'] = merged_data_df
     st.session_state['price_data_df'] = price_data_df
+    st.session_state['unique_brands'] = unique_brands
 
-    return asin_keyword_df, keyword_id_df, merged_data_df, price_data_df
+    return asin_keyword_df, keyword_id_df, merged_data_df, price_data_df, unique_brands
 
 # Ensure data is loaded into session state during app initialization
 if 'asin_keyword_df' not in st.session_state:
@@ -439,6 +445,7 @@ asin_keyword_df = st.session_state['asin_keyword_df']
 keyword_id_df = st.session_state['keyword_id_df']
 merged_data_df = st.session_state['merged_data_df']
 price_data_df = st.session_state['price_data_df']
+unique_brands = st.session_state['unique_brands']
 
 # Display last refresh time
 st.write("Data last refreshed on:", st.session_state.last_refresh_time)
@@ -550,6 +557,10 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
         similar_asin_list = []  # No filtering based on ASINs if "No Keywords" is selected
 
     #merged_data_df['identified_brand'] = merged_data_df['product_title'].apply(extract_brand_from_title)
+    
+    # Fetch user selections from session state
+    enable_brand_sub_filter = st.session_state.get('enable_brand_sub_filter', False)
+    selected_brands = st.session_state.get('selected_brands', [])
 
     target_product = merged_data_df[merged_data_df['ASIN'] == asin].iloc[0]
     target_details = {**target_product['Product Details'], **target_product['Glance Icon Details']}
@@ -570,6 +581,12 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
             continue
         if same_brand_option == 'omit' and compare_brand == target_brand:
             continue
+
+        # Apply sub-filter for 'omit' and 'all' options if enabled
+        if same_brand_option in ['omit', 'all'] and enable_brand_sub_filter:
+            if selected_brands and compare_brand not in selected_brands:
+                continue  # Skip brands not in the selected list
+
         if price_min <= row['price'] <= price_max:
             compare_details = {**row['Product Details'], **row['Glance Icon Details']}
 
@@ -1377,6 +1394,26 @@ clear_session_state_on_date_change()
 
 # Radio buttons for same brand option
 same_brand_option = st.radio("Same Brand Option", ('all', 'only', 'omit'))
+# Sub-filter option
+enable_brand_sub_filter = False
+selected_brands = []
+
+if same_brand_option in ['omit', 'all']:
+    # Add a checkbox for enabling the sub-filter
+    enable_brand_sub_filter = st.checkbox("Select Specific Competitor Brands", value=False)
+
+    # Only show the multiselect when the checkbox is checked
+    if enable_brand_sub_filter:
+        st.write("Choose competitor brands to include:")
+        selected_brands = st.multiselect(
+            "Competitor Brands",
+            options=unique_brands,  # Preprocessed list of unique brands
+            help="Select specific brands to filter competitors. Leave empty to include all brands."
+        )
+
+# Store the selected brands in session state
+st.session_state['enable_brand_sub_filter'] = enable_brand_sub_filter
+st.session_state['selected_brands'] = selected_brands
 
 # Initialize session state for button click tracking
 if 'show_features_clicked' not in st.session_state:

@@ -382,7 +382,7 @@ def fetch_serp_data(updated_df):
     cursor = conn.cursor()
 
     end_date = datetime.now().date()
-    start_date = end_date - timedelta(days=3)
+    start_date = end_date - timedelta(days=4)
 
     logger.info(f"Fetching SERP data from {start_date} to {end_date}")
     
@@ -966,7 +966,7 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
 
     # Step 3: Drop data older than 30 days (rolling window logic)
     # cutoff_date = today.date() - timedelta(days=31)  # Calculate cutoff date
-    cutoff_date = pd.Timestamp(today.date() - timedelta(days=30))
+    cutoff_date = pd.Timestamp(today.date() - timedelta(days=31))
     if not existing_df.empty:
         existing_df = existing_df[existing_df['date'] >= cutoff_date]  # Retain only last 30 days
         logger.info(f"Dropped data older than {cutoff_date}. Remaining data shape: {existing_df.shape}")
@@ -1034,7 +1034,7 @@ if __name__ == '__main__':
     df_product_data = fetch_and_merge_product_data(df_serp)
 
     end_date = datetime.now().date()
-    start_date = end_date - timedelta(days=3)
+    start_date = end_date - timedelta(days=4)
     sp_api_data = fetch_and_enrich_price_data_by_date_range()
 
     final_combined_data = align_and_combine_serp_and_sp_api_data(df_product_data, sp_api_data)

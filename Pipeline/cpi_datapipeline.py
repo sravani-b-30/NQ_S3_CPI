@@ -960,9 +960,9 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
 
     # Step 2: Ensure `date` column is in datetime format for both DataFrames
     if not existing_df.empty:
-        existing_df['date'] = pd.to_datetime(existing_df['date'])
+        existing_df['date'] = pd.to_datetime(existing_df['date'], errors='coerce')
 
-    new_analysis_df['date'] = pd.to_datetime(new_analysis_df['date'])
+    new_analysis_df['date'] = pd.to_datetime(new_analysis_df['date'], errors='coerce')
 
     # Step 3: Drop data older than 30 days (rolling window logic)
     cutoff_date = today.date() - timedelta(days=31)  # Calculate cutoff date

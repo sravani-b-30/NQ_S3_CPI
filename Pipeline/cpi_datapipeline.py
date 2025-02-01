@@ -957,7 +957,13 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
     # Step 4: Upload the updated DataFrame directly to S3
     new_file_name = f"{folder_path}{prefix}{today.strftime('%Y-%m-%d')}{file_extension}"
     csv_buffer = io.StringIO()
+
+    logger.info(f"Starting to save updated DataFrame to CSV in memory. Shape: {updated_df.shape}")
+
     updated_df.to_csv(csv_buffer, index=False)
+
+    logger.info("DataFrame successfully written to CSV in memory, preparing for S3 upload.")
+   
     try:
         s3_client.put_object(Bucket=bucket_name, Key=new_file_name, Body=csv_buffer.getvalue())
         logger.info(f"Uploaded updated file: {new_file_name} to S3 bucket: {bucket_name}")

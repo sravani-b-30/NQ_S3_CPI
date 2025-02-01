@@ -908,6 +908,28 @@ def fetch_latest_file_from_s3(bucket_name, prefix="NAPQUEEN/merged_data_", file_
     latest_file = max(files, key=lambda x: x['LastModified'])
     return latest_file['Key'], latest_file['LastModified']
 
+def upload_csv_to_s3(bucket_name, key, dataframe):
+    """
+    Uploads a large CSV file to S3 in a memory-efficient way.
+    - bucket_name: S3 bucket name
+    - key: S3 object key (filename)
+    - dataframe: Pandas DataFrame to be uploaded
+    """
+    s3_client = boto3.client('s3')
+
+    # Step 1: Create a streaming buffer instead of StringIO (less memory usage)
+    with io.BytesIO() as temp_buffer:
+        dataframe.to_csv(temp_buffer, index=False)
+        temp_buffer.seek(0)
+
+        try:
+            s3_client.put_object(Bucket=bucket_name, Key=key, Body=temp_buffer)
+            print(f"✅ Successfully uploaded: {key} (Size: {len(temp_buffer.getvalue()) / (1024 * 1024):.2f} MB)")
+        except Exception as e:
+            print(f"❌ Upload failed: {e}")
+            raise
+
+
 def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="merged_data_", file_extension=".csv"):
     """
     Processes daily analysis results, checks the file's date, and appends or creates a new file based on month difference.
@@ -964,12 +986,18 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
 
     logger.info("DataFrame successfully written to CSV in memory, preparing for S3 upload.")
    
-    try:
-        s3_client.put_object(Bucket=bucket_name, Key=new_file_name, Body=csv_buffer.getvalue())
-        logger.info(f"Uploaded updated file: {new_file_name} to S3 bucket: {bucket_name}")
-    except Exception as e:
-        logger.error(f"Failed to upload file {new_file_name} to S3. Error: {e}")
-        raise
+    # try:
+    #     s3_client.put_object(Bucket=bucket_name, Key=new_file_name, Body=csv_buffer.getvalue())
+    #     logger.info(f"Uploaded updated file: {new_file_name} to S3 bucket: {bucket_name}")
+    # except Exception as e:
+    #     logger.error(f"Failed to upload file {new_file_name} to S3. Error: {e}")
+    #     raise
+    
+    upload_csv_to_s3(
+    bucket_name='anarix-cpi',
+    key=new_file_name,
+    dataframe=updated_df
+    )
 
     return updated_df
     # # Step 1: Fetch the latest file

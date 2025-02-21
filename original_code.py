@@ -572,11 +572,18 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
     similarities = []
     unique_asins = set()
     seen_combinations = set()
+    exclude_words = {"frames"}
 
     for index, row in merged_data_df.iterrows():
         if row['ASIN'] == asin:
             continue
+
         compare_brand = row['brand']
+        compare_title = str(row['product_title']).lower()
+        
+        if any(word in compare_title for word in exclude_words):
+            continue 
+
         if same_brand_option == 'only' and compare_brand != target_brand:
             continue
         if same_brand_option == 'omit' and compare_brand == target_brand:
@@ -590,7 +597,7 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
         if price_min <= row['price'] <= price_max:
             compare_details = {**row['Product Details'], **row['Glance Icon Details']}
 
-            compare_title = str(row['product_title']).lower()
+            
             compare_desc = str(row['Description']).lower()
 
             compulsory_match = check_compulsory_features_match(target_details, compare_details, compulsory_features)

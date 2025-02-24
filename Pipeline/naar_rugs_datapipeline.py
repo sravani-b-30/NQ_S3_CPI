@@ -387,7 +387,7 @@ def fetch_serp_data(keyword_ids_df):
     merged_df = pd.merge(keyword_ids_df, all_data_df, on='keyword_id')
 
     # Rename the scrapped_at column to date
-    merged_df.rename(columns={'scrapped_at': 'date' , 'sale_price':'price'}, inplace=True)
+    merged_df.rename(columns={'scrapped_at': 'Date' , 'sale_price':'price'}, inplace=True)
     logger.info(f"Renamed scrapped_at and sale_price columns from SERP Data : {merged_df.columns}")
 
     logger.info(f"Merged SERP data with keyword information: {merged_df.shape}")
@@ -471,25 +471,25 @@ def fetch_and_merge_product_data(serp_df):
 
 def pre_processing_serp_data(merged_df) :
 
-    merged_df['scrapped_at'] = pd.to_datetime(merged_df['scrapped_at'], errors='coerce', format='mixed')
+    merged_df['Date'] = pd.to_datetime(merged_df['Date'], errors='coerce', format='mixed')
 
     # Drop rows where `scrapped_at` could not be parsed
-    merged_df = merged_df.dropna(subset=['scrapped_at'])
+    merged_df = merged_df.dropna(subset=['Date'])
 
     # Extract the date part from `scrapped_at` and create a new `date` column
-    merged_df['date'] = merged_df['scrapped_at'].dt.date
+    merged_df['date'] = merged_df['Date'].dt.date
     logger.info(f"Extracted date from scrapped_at column : {merged_df.shape}")
     logger.info(f"Datatype of date column : {merged_df['date'].dtype}")
 
     # Sort the DataFrame by `walmart_id`, `date`, and `scrapped_at`
-    merged_df = merged_df.sort_values(by=['asin', 'date', 'scrapped_at'])
+    merged_df = merged_df.sort_values(by=['asin', 'date', 'Date'])
 
     # Group by `walmart_id` and `date`, and take the last occurrence
     merged_df = merged_df.groupby(['asin', 'date']).tail(1)
     logger.info(f"Grouped by asin and date : {merged_df.shape}")
 
     
-    merged_df.drop(columns=['scrapped_at'], inplace=True)
+    merged_df.drop(columns=['Date'], inplace=True)
     logger.info(f"Dropped scrapped_at column from the dataframe : {merged_df.columns}")
 
     # Reset index to clean up the DataFrame

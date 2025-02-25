@@ -1058,7 +1058,7 @@ def product_details_merge_data(df, df_scrapped_info):
     """
 
     # Filter out rows in df_scrapped_info where 'Option' is '{}'
-    df_scrapped_info = df_scrapped_info[df_scrapped_info['Option'] != '{}']
+    # df_scrapped_info = df_scrapped_info[df_scrapped_info['Option'] != '{}']
 
     # Rename 'asin' to 'ASIN' in df to match df_scrapped_info column
     df.rename(columns={'asin': 'ASIN'}, inplace=True)
@@ -1336,7 +1336,7 @@ def scrapper_handler(df,file_path, num_workers=15):
         except pd.errors.EmptyDataError:
             logger.warning(f"File {file_path} is empty. Starting with an empty list.")
             total_collected = []
-            
+
     # try:
     #     existing_df = pd.read_csv(file_path, on_bad_lines='skip')
     #     total_collected = existing_df['ASIN'].tolist()
@@ -1355,12 +1355,13 @@ def scrapper_handler(df,file_path, num_workers=15):
 
     # Run parallel scraping for remaining ASINs
     if asins:
-        logger.info(f"Starting parallel scraping with {num_workers} workers.")
-        try:
-            parallel_scrape(asins, num_workers, file_path)
-            logger.info("Scraping completed successfully.")
-        except Exception as e:
-            logger.error(f"Error during parallel scraping: {e}")
+        logger.info("Loading the same file without scraping , as the ASINs are already scraped.")
+        # logger.info(f"Starting parallel scraping with {num_workers} workers.")
+        # try:
+        #     parallel_scrape(asins, num_workers, file_path)
+        #     logger.info("Scraping completed successfully.")
+        # except Exception as e:
+        #     logger.error(f"Error during parallel scraping: {e}")
     else:
         logger.info("No new ASINs to scrape.")
         

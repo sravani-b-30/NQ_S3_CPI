@@ -1314,16 +1314,38 @@ def scrapper_handler(df,file_path, num_workers=15):
     df['asin'] = df['asin'].str.upper()
     df_asins = df['asin'].unique().tolist()
     df_asins = [asin for asin in df_asins if asin.startswith('B')]
-
-    try:
-        existing_df = pd.read_csv(file_path, on_bad_lines='skip')
-        total_collected = existing_df['ASIN'].tolist()
-        asins_to_remove = existing_df[existing_df['Option'] == '{}']['ASIN'].str.upper().unique().tolist()
-        total_collected = [asin for asin in total_collected if asin not in asins_to_remove]
-        logger.info("Loaded existing ASIN data from file.")
-    except FileNotFoundError:
-        logger.warning(f"File not found: {file_path}. Starting with an empty list.")
+    
+    if not os.path.isfile(file_path) or os.stat(file_path).st_size == 0:
+        # If the file does not exist or is empty, start fresh
+        logger.warning(f"File not found or empty: {file_path}. Starting with an empty list.")
         total_collected = []
+    else:
+        try:
+            existing_df = pd.read_csv(file_path, on_bad_lines='skip')
+            if existing_df.empty:
+                logger.warning(f"Existing file {file_path} is empty. Starting with an empty list.")
+                total_collected = []
+            else:
+                total_collected = existing_df['ASIN'].tolist()
+                asins_to_remove = existing_df[existing_df['Option'] == '{}']['ASIN'].str.upper().unique().tolist()
+                total_collected = [asin for asin in total_collected if asin not in asins_to_remove]
+                logger.info("Loaded existing ASIN data from file.")
+        except FileNotFoundError:
+            logger.warning(f"File not found: {file_path}. Starting with an empty list.")
+            total_collected = []
+        except pd.errors.EmptyDataError:
+            logger.warning(f"File {file_path} is empty. Starting with an empty list.")
+            total_collected = []
+            
+    # try:
+    #     existing_df = pd.read_csv(file_path, on_bad_lines='skip')
+    #     total_collected = existing_df['ASIN'].tolist()
+    #     asins_to_remove = existing_df[existing_df['Option'] == '{}']['ASIN'].str.upper().unique().tolist()
+    #     total_collected = [asin for asin in total_collected if asin not in asins_to_remove]
+    #     logger.info("Loaded existing ASIN data from file.")
+    # except FileNotFoundError:
+    #     logger.warning(f"File not found: {file_path}. Starting with an empty list.")
+    #     total_collected = []
 
     asins = [asin for asin in df_asins if asin not in total_collected]
 

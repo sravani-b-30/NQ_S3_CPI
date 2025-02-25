@@ -956,7 +956,7 @@ def fetch_price_tracker_data(marketplace, days=30):
     # Save DataFrame to S3
     save_to_s3(
         df=df,
-        s3_folder=s3_folder,
+        brand=brand,
         file_name=file_name_,
     )
     
@@ -1376,7 +1376,7 @@ if __name__ == '__main__':
     file_name = f"serp_data_{today_date}.csv"
     save_to_s3(
         df=final_merged_df,
-        s3_folder=f'{brand}/',
+        brand=brand,
         file_name=file_name
     )
 
@@ -1387,7 +1387,7 @@ if __name__ == '__main__':
     # Save the updated NAPQUEEN.csv to S3
     save_to_s3(
         df=pd.read_csv(file_path, on_bad_lines='skip'),  # Load the updated file into a DataFrame
-        s3_folder=f'{brand}/',
+        brand=brand,
         file_name='NAAR_RUGS_PRODUCT_DETAILS.csv'
     )
 
@@ -1404,7 +1404,7 @@ if __name__ == '__main__':
     
     save_to_s3(
         df=final_df,
-        s3_folder=f'{brand}/',
+        brand=brand,
         file_name=file_name
     )
     

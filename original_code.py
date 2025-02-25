@@ -572,7 +572,7 @@ def find_similar_products(asin, price_min, price_max, merged_data_df, compulsory
     similarities = []
     unique_asins = set()
     seen_combinations = set()
-    exclude_words = {"frames", "frame"}
+    exclude_words = {}
 
     for index, row in merged_data_df.iterrows():
         if row['ASIN'] == asin:

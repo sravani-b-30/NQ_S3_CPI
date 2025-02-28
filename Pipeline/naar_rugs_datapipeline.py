@@ -12,6 +12,9 @@ import multiprocessing
 import certifi
 import logging
 from decimal import Decimal
+import boto3
+import io
+from io import StringIO
 
 # Set up logging
 logging.basicConfig(
@@ -569,8 +572,7 @@ def save_to_s3(df, brand, file_name):
     :param aws_access_key_id: AWS access key for authentication.
     :param aws_secret_access_key: AWS secret access key for authentication.
     """
-    import boto3
-    from io import StringIO
+    
 
     # Initialize the S3 client
     s3_client = boto3.client(
@@ -1309,33 +1311,75 @@ def fetch_keyword_ids(df_keyword):
     conn.close()
     return df_results
 
+def fetch_latest_napqueen_file(bucket_name, brand, prefix="NAAR_RUGS_PRODUCT_DETAILS", file_extension=".csv"):
+    """
+    Fetches the latest file matching the prefix and extension in the brand folder from S3 based on LastModified property.
 
-def scrapper_handler(df,file_path, num_workers=15):
+    :param bucket_name: S3 bucket name.
+    :param brand: Brand folder in S3 bucket.
+    :param prefix: Prefix of the file name to look for (default is "NAPQUEEN").
+    :param file_extension: File extension to match (default is ".csv").
+    :return: DataFrame loaded from the latest file.
+    """
+    s3_client = boto3.client('s3')
+    folder_path = f"{brand}/"
+
+    try:
+        # List objects in the S3 bucket with the specified prefix
+        response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=folder_path)
+        if 'Contents' not in response:
+            raise FileNotFoundError(f"No files found in bucket '{bucket_name}' with prefix '{folder_path}'.")
+
+        # Filter files matching the prefix and extension
+        files = [
+            obj for obj in response['Contents']
+            if obj['Key'].startswith(folder_path + prefix) and obj['Key'].endswith(file_extension)
+        ]
+        if not files:
+            raise FileNotFoundError(f"No matching files found in bucket '{bucket_name}' for prefix '{prefix}'.")
+
+        # Find the latest file based on LastModified timestamp
+        latest_file = max(files, key=lambda x: x['LastModified'])
+        latest_file_key = latest_file['Key']
+        logger.info(f"Latest file found: {latest_file_key} (LastModified: {latest_file['LastModified']})")
+
+        # Fetch the latest file
+        obj = s3_client.get_object(Bucket=bucket_name, Key=latest_file_key)
+        df = pd.read_csv(io.BytesIO(obj['Body'].read()), on_bad_lines='skip')
+        logger.info(f"Fetched file '{latest_file_key}' from S3 bucket '{bucket_name}'.")
+        return df
+    except Exception as e:
+        logger.warning(f"Failed to fetch latest file from S3. Starting fresh. Error: {e}")
+        return pd.DataFrame()  # Return an empty DataFrame if no file is found
+
+
+
+def scrapper_handler(df, bucket_name, brand, file_name="NAAR_RUGS_PRODUCT_DETAILS.csv", num_workers=15):
     df['asin'] = df['asin'].str.upper()
     df_asins = df['asin'].unique().tolist()
     df_asins = [asin for asin in df_asins if asin.startswith('B')]
     
-    if not os.path.isfile(file_path) or os.stat(file_path).st_size == 0:
-        # If the file does not exist or is empty, start fresh
-        logger.warning(f"File not found or empty: {file_path}. Starting with an empty list.")
+    # if not os.path.isfile(file_path) or os.stat(file_path).st_size == 0:
+    #     # If the file does not exist or is empty, start fresh
+    #     logger.warning(f"File not found or empty: {file_path}. Starting with an empty list.")
+    #     total_collected = []
+    # else:
+    try:
+        existing_df = fetch_latest_napqueen_file(bucket_name, brand, file_name)
+        if existing_df.empty:
+            logger.warning(f"Existing file {file_name} is empty. Starting with an empty list.")
+            total_collected = []
+        else:
+            total_collected = existing_df['ASIN'].tolist()
+            asins_to_remove = existing_df[existing_df['Option'] == '{}']['ASIN'].str.upper().unique().tolist()
+            total_collected = [asin for asin in total_collected if asin not in asins_to_remove]
+            logger.info("Loaded existing ASIN data from file.")
+    except FileNotFoundError:
+        logger.warning(f"File not found: {file_name}. Starting with an empty list.")
         total_collected = []
-    else:
-        try:
-            existing_df = pd.read_csv(file_path, on_bad_lines='skip')
-            if existing_df.empty:
-                logger.warning(f"Existing file {file_path} is empty. Starting with an empty list.")
-                total_collected = []
-            else:
-                total_collected = existing_df['ASIN'].tolist()
-                asins_to_remove = existing_df[existing_df['Option'] == '{}']['ASIN'].str.upper().unique().tolist()
-                total_collected = [asin for asin in total_collected if asin not in asins_to_remove]
-                logger.info("Loaded existing ASIN data from file.")
-        except FileNotFoundError:
-            logger.warning(f"File not found: {file_path}. Starting with an empty list.")
-            total_collected = []
-        except pd.errors.EmptyDataError:
-            logger.warning(f"File {file_path} is empty. Starting with an empty list.")
-            total_collected = []
+    except pd.errors.EmptyDataError:
+        logger.warning(f"File {file_name} is empty. Starting with an empty list.")
+        total_collected = []
 
     # try:
     #     existing_df = pd.read_csv(file_path, on_bad_lines='skip')
@@ -1355,15 +1399,24 @@ def scrapper_handler(df,file_path, num_workers=15):
 
     # Run parallel scraping for remaining ASINs
     if asins:
-        logger.info("Loading the same file without scraping , as the ASINs are already scraped.")
-        # logger.info(f"Starting parallel scraping with {num_workers} workers.")
-        # try:
-        #     parallel_scrape(asins, num_workers, file_path)
-        #     logger.info("Scraping completed successfully.")
-        # except Exception as e:
-        #     logger.error(f"Error during parallel scraping: {e}")
+        # logger.info("Loading the same file without scraping , as the ASINs are already scraped.")
+        logger.info(f"Starting parallel scraping with {num_workers} workers.")
+        try:
+            parallel_scrape(asins, num_workers, file_name)
+
+            scraped_data = pd.read_csv(file_name, on_bad_lines='skip')
+            df_scrapped_info = pd.concat([existing_df, scraped_data], ignore_index=True)
+            logger.info("Scraping completed successfully.")
+            logger.info("Scraping completed and data appended to the S3 file.")
+            
+        except Exception as e:
+            logger.error(f"Error during parallel scraping: {e}")
+            df_scrapped_info = existing_df
     else:
         logger.info("No new ASINs to scrape.")
+        df_scrapped_info = existing_df
+
+    return df_scrapped_info
         
 
 if __name__ == '__main__':
@@ -1405,18 +1458,23 @@ if __name__ == '__main__':
 
     #Step 7
     file_path = "Pipeline/NAAR_RUGS_PRODUCT_DETAILS.csv"
-    scrapper_handler(final_merged_df,file_path)
+    
+    df_scrapped_info = scrapper_handler(
+    df=final_merged_df,
+    bucket_name="anarix-cpi",
+    brand="NAAR_RUGS_SELLER",
+    file_name="NAAR_RUGS_PRODUCT_DETAILS.csv"
+    )
 
     # Save the updated NAPQUEEN.csv to S3
     save_to_s3(
-        df=pd.read_csv(file_path, on_bad_lines='skip'),  # Load the updated file into a DataFrame
+        df=df_scrapped_info,
         brand=brand,
         file_name='NAAR_RUGS_PRODUCT_DETAILS.csv'
     )
 
-    logger.info(f"Uploaded {file_path} to S3 bucket 'anarix-cpi' in folder '{brand}/'")
+    logger.info(f"Uploaded {file_name} to S3 bucket 'anarix-cpi' in folder '{brand}/'")
 
-    df_scrapped_info = pd.read_csv(file_path ,on_bad_lines='skip')
     final_df = product_details_merge_data(final_merged_df, df_scrapped_info)
 
     # # Example usage:

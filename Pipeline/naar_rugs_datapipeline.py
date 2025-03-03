@@ -907,6 +907,127 @@ def fetch_price_tracker_data(marketplace, days=30):
     B0B9CCH5B6
     B0B9CCZ154
     B0CFLQWG19
+    B0D4B5NZ18
+    B0D4B5S9SX
+    B0D4B4DFPP
+    B0D4B41BZT
+    B0D4B5J9FK
+    B0D4B58QD7
+    B0D4B64HV8
+    B0D4B476H5
+    B0D4B5BW9P
+    B0D4B52MZN
+    B0D4B5TVNK
+    B0D4B6LJY9
+    B0D4B4SR5Y
+    B0D4B6QS97
+    B0D4B4VXCK
+    B0D4B66T3J
+    B0D4B61YK9
+    B0D4B638PB
+    B0D4B64ZCS
+    B0D4B3TVWJ
+    B0D4B3BYXJ
+    B0D4B4FF84
+    B0D4B55HHC
+    B0D4B4TB3N
+    B0D4B4HC54
+    B0D4B6QMWC
+    B0D4B5R5M7
+    B0D4B5KT1K
+    B0D4B74CR1
+    B0D4B2NQFX
+    B0D4B4NTYV
+    B0D4B463RK
+    B0D4B46CMH
+    B0D4B547MX
+    B0D4B68BZS
+    B0D4B4V7K6
+    B0D4B65176
+    B0D4B57N44
+    B0D4B5TV8T
+    B0D4B3WC56
+    B0D4B5962G
+    B0D4B6GYM7
+    B0D4B5BZL9
+    B0D4B73PCJ
+    B0D4B34D99
+    B0D4B5FS41
+    B0D4B4LBHP
+    B0D4B5M6KS
+    B0D4B4PSMC
+    B0D4B4R1X4
+    B0D4B51FM5
+    B0D4B4QNR1
+    B0D4B4PNVH
+    B0D4B4LH2J
+    B0CK4VR75M
+    B0D4B4TF83
+    B0D4B67ZRZ
+    B0D4B6GF8R
+    B0D4B4LLNX
+    B0D4B5KKWJ
+    B0D4B5KD49
+    B0D4B5978G
+    B0D4B55DKH
+    B0CK4W5FVZ
+    B0D49ZL8B6
+    B0D4B54BJF
+    B0D4B5HJXK
+    B0D4B5FN5X
+    B0D4B43P6F
+    B0D4B57WRM
+    B0D4B4Q97J
+    B0D4B4741K
+    B0D4B66RMJ
+    B0D4B6BTJC
+    B0D4B4ZV67
+    B0D4B5J4KJ
+    B0D4B4BW4N
+    B0D4B3NJFT
+    B0D4B5KJMD
+    B0B9CBNSB9
+    B0D4B3VWFT
+    B0D4B59Z9J
+    B0D4B43XJM
+    B0D4B4TQGQ
+    B0D4B5M187
+    B0B9CCZ15J
+    B0D4B55B6D
+    B0CK4VR75M
+    B0D4B4GZMK
+    B0B9CCMGL5
+    B0D4B5HCC9
+    B0B9CBKL5D
+    B0B9CC2CSG
+    B0D4B5NZ18
+    B0D4B4RRS1
+    B0B9CBKK86
+    B0B9C9WC7N
+    B0B9CD1Y63
+    B0B9CB9DMC
+    B0CK4T6VBP
+    B0D4B4N96T
+    B0CK4W5FVZ
+    B0D4B5KSD2
+    B0B9CDDD6D
+    B0B9CBLZKT
+    B0CK2L23LZ
+    B0D4B4P9FT
+    B0B9CGVKQB
+    B0D4B4HGKM
+    B0B9CCPLQN
+    B0D4B4ZWKH
+    B0D4B4NTF3
+    B0D4B4BD25
+    B0D4B6MNLB
+    B0B9CBLW46
+    B0B9CDR1QK
+    B0D4B5J8WJ
+    B0B9CFR129
+    B0D4B59BZ2
+    B0B9CDPNFM
+
     """
     
     naar_rugs_product_ids = [pid.strip() for pid in product_ids_raw.splitlines() if pid.strip()]
@@ -1311,7 +1432,7 @@ def fetch_keyword_ids(df_keyword):
     conn.close()
     return df_results
 
-def fetch_latest_napqueen_file(bucket_name, brand, prefix="NAAR_RUGS_PRODUCT_DETAILS", file_extension=".csv"):
+def fetch_latest_naar_rugs_file(bucket_name, brand, prefix="NAAR_RUGS_PRODUCT_DETAILS", file_extension=".csv"):
     """
     Fetches the latest file matching the prefix and extension in the brand folder from S3 based on LastModified property.
 
@@ -1365,7 +1486,7 @@ def scrapper_handler(df, bucket_name, brand, file_name="NAAR_RUGS_PRODUCT_DETAIL
     #     total_collected = []
     # else:
     try:
-        existing_df = fetch_latest_napqueen_file(bucket_name, brand, file_name)
+        existing_df = fetch_latest_naar_rugs_file(bucket_name, brand, file_name)
         if existing_df.empty:
             logger.warning(f"Existing file {file_name} is empty. Starting with an empty list.")
             total_collected = []

@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 import os
+from logger import logger
 
 # Load environment variables from .env file
 load_dotenv()
@@ -43,3 +44,5 @@ required_env_vars = ["MONGO_URI", "DATABASE_NAME","DB_HOST","DB_PORT", "DB_NAME"
 for var in required_env_vars:
     if not os.getenv(var):
         raise ValueError(f"Missing required environment variable: {var}")
+    
+logger.info("Configuration variables loaded successfully")

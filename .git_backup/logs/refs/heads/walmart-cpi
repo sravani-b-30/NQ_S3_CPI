@@ -1,0 +1,49 @@
+0000000000000000000000000000000000000000 8179b2f897af0da1a5cef20f1f6b8596c920a1a8 B.Sravani <sravani@napqueens.com> 1730806942 +0530	commit (initial): Initial commit of the walmart napqueen cpi
+8179b2f897af0da1a5cef20f1f6b8596c920a1a8 e8b935a1a2517f250c093e76b1d8342729ac7544 B.Sravani <sravani@napqueens.com> 1730808138 +0530	commit: changed id column to string
+e8b935a1a2517f250c093e76b1d8342729ac7544 f57ccac16cb75d715a866fce90ab86cb56b6a38f B.Sravani <sravani@napqueens.com> 1730879356 +0530	commit: removed compute of the serp df
+f57ccac16cb75d715a866fce90ab86cb56b6a38f 0f7740393cfed4fbb7e7b5addc020507a67f4ac3 B.Sravani <sravani@napqueens.com> 1730879735 +0530	commit: computed serp dtaa file in the beginning itself
+0f7740393cfed4fbb7e7b5addc020507a67f4ac3 d97a3c282b3bf4d08d95c9b49520df1d5bf810d7 B.Sravani <sravani@napqueens.com> 1730880014 +0530	commit: modified update product details function
+d97a3c282b3bf4d08d95c9b49520df1d5bf810d7 4228ff4c274d763e55ab159ac1eee32f5cb4f605 B.Sravani <sravani@napqueens.com> 1730880618 +0530	commit: removed extra unpacked arguments in line 393
+4228ff4c274d763e55ab159ac1eee32f5cb4f605 5a3c345aefc311a428159919452acc210c5d9522 B.Sravani <sravani@napqueens.com> 1730881773 +0530	commit: modified all the keyerrors of asin
+5a3c345aefc311a428159919452acc210c5d9522 71ede78fbc35b6b13a60169634b8bfb4ec3eaf14 B.Sravani <sravani@napqueens.com> 1730883367 +0530	commit: modified remaining asin keyerrors and fixed positional argument issue of run analysis button
+71ede78fbc35b6b13a60169634b8bfb4ec3eaf14 44858ae745ef3f99f823d0156b706bb05b69d2ac B.Sravani <sravani@napqueens.com> 1730883808 +0530	commit: renamed date column
+44858ae745ef3f99f823d0156b706bb05b69d2ac 7ca3f14f375a0dfe82ad64fbf62f0c00876b65cd B.Sravani <sravani@napqueens.com> 1730885937 +0530	commit: refactored load and preprocess data function on updating product details
+7ca3f14f375a0dfe82ad64fbf62f0c00876b65cd 539f7a2ed4691989856136778b5f3d977490d648 B.Sravani <sravani@napqueens.com> 1730886439 +0530	commit: added parsing product details into dictionary function
+539f7a2ed4691989856136778b5f3d977490d648 1ce912510bafc8ad9b91bcba50c773e5ebb76e93 B.Sravani <sravani@napqueens.com> 1730886755 +0530	commit: added parsing only for str format of product details
+1ce912510bafc8ad9b91bcba50c773e5ebb76e93 2075ca6412f91c01e587805a109f5e1dd31ea21c B.Sravani <sravani@napqueens.com> 1730887229 +0530	commit: added list also along with string to parse into dictionary
+2075ca6412f91c01e587805a109f5e1dd31ea21c 3de479902f44260f257ea3b9ca290a839934d9fc B.Sravani <sravani@napqueens.com> 1730887510 +0530	commit: added check to initialize empty dictionary if it's not in dict
+3de479902f44260f257ea3b9ca290a839934d9fc ebe3aa89f22d504d08446ef1402d33ba7e081c52 B.Sravani <sravani@napqueens.com> 1730887852 +0530	commit: chnaged mergeing function to pd.merge of reference_df
+ebe3aa89f22d504d08446ef1402d33ba7e081c52 0a7a3696b43b1d70502e4e9c17b228e8db38ee2c B.Sravani <sravani@napqueens.com> 1730888143 +0530	commit: added print statement to check the merging of reference df
+0a7a3696b43b1d70502e4e9c17b228e8db38ee2c e1a4fb5702bf4bdb550481bda801a56322b41ab8 B.Sravani <sravani@napqueens.com> 1730888517 +0530	commit: removed ref from merging
+e1a4fb5702bf4bdb550481bda801a56322b41ab8 da94d17d0f84984f3dbad7daedbbfad227e6a8a9 B.Sravani <sravani@napqueens.com> 1730889531 +0530	commit: modified few function not to overwrite other keys in product details
+da94d17d0f84984f3dbad7daedbbfad227e6a8a9 9faafe95d8e640e3a4c876f866e0135e5f5ca0a6 B.Sravani <sravani@napqueens.com> 1730889888 +0530	commit: modified function
+9faafe95d8e640e3a4c876f866e0135e5f5ca0a6 1429f2d0125e43226a1489e6a4a346b18e25f4d0 B.Sravani <sravani@napqueens.com> 1730890620 +0530	commit: removed all extra processings of size and style
+1429f2d0125e43226a1489e6a4a346b18e25f4d0 1d1bba6ab57b7039d4fda4ac11551e7f86f975ed B.Sravani <sravani@napqueens.com> 1730892103 +0530	commit: added checks list object
+1d1bba6ab57b7039d4fda4ac11551e7f86f975ed 6f0f242461975808580e0e0b784601e61876a7e2 B.Sravani <sravani@napqueens.com> 1730892427 +0530	commit: removed everything related to product details
+6f0f242461975808580e0e0b784601e61876a7e2 ae8f4546a3549668cf13cb9145b34026420809e9 B.Sravani <sravani@napqueens.com> 1730895791 +0530	commit: added check to know what format product details is in firstly
+ae8f4546a3549668cf13cb9145b34026420809e9 75cbfa68eaaa52d1227bdd6f6ce7f5117c7e5c4a B.Sravani <sravani@napqueens.com> 1730896585 +0530	commit: converted product details to dictionary
+75cbfa68eaaa52d1227bdd6f6ce7f5117c7e5c4a a940111d0205598029af488602cc508f4d0a5600 B.Sravani <sravani@napqueens.com> 1730897209 +0530	commit: added one more function to convert list to dictionary
+a940111d0205598029af488602cc508f4d0a5600 44fa3eeb1cbd7c69acc5ebc79a7b2144c511a638 B.Sravani <sravani@napqueens.com> 1730897552 +0530	commit: fixed keyerror of asin
+44fa3eeb1cbd7c69acc5ebc79a7b2144c511a638 724f2e5a1fc7fb9ae96182a8fe9806550408b05d B.Sravani <sravani@napqueens.com> 1730899361 +0530	commit: fixed positional argument with time-seri
+724f2e5a1fc7fb9ae96182a8fe9806550408b05d a044ae33da7013f202678364972b07200ff06d03 B.Sravani <sravani@napqueens.com> 1730899775 +0530	commit: added extraction of size and style from product title
+a044ae33da7013f202678364972b07200ff06d03 5d11932ebda85eeaedbc9f44cbfd2cbf5a8d1dac B.Sravani <sravani@napqueens.com> 1730902094 +0530	commit: added debugging statement for style
+5d11932ebda85eeaedbc9f44cbfd2cbf5a8d1dac f898c1f05f8709ca8a977b186860a3c9b6686f4a B.Sravani <sravani@napqueens.com> 1730902427 +0530	commit: increased head number of diaply
+f898c1f05f8709ca8a977b186860a3c9b6686f4a 11f2d57b808cda891b8e0b7fcf7957c2551b3df6 B.Sravani <sravani@napqueens.com> 1730905186 +0530	commit: added normalization of size in pd and also modified applying of extract size and style function
+11f2d57b808cda891b8e0b7fcf7957c2551b3df6 91dc1793fd736dcd6dcfa07d97a4840db196c3ac B.Sravani <sravani@napqueens.com> 1730905955 +0530	commit: modified normalize_style function
+91dc1793fd736dcd6dcfa07d97a4840db196c3ac 06a4532ab7374402d2fb4c8d5c5ad50c0384d0ed B.Sravani <sravani@napqueens.com> 1730906644 +0530	commit: modified size normalizing function
+06a4532ab7374402d2fb4c8d5c5ad50c0384d0ed aee09127bb7f621bd666a066762ac80592ccfe2a B.Sravani <sravani@napqueens.com> 1730994263 +0530	commit: Fixed all size and style issue
+aee09127bb7f621bd666a066762ac80592ccfe2a 8dc29e7083d91567b247728e0691f695cc910000 B.Sravani <sravani@napqueens.com> 1731053253 +0530	commit: Modified few UI elements
+8dc29e7083d91567b247728e0691f695cc910000 0e5ae5548df7b1adacb6ae85f71e44fb3cbe5d81 B.Sravani <sravani@napqueens.com> 1732878665 +0530	commit: added gitignore file to remove unnecessary files from tracking
+0e5ae5548df7b1adacb6ae85f71e44fb3cbe5d81 2ffeff6a151ab96461e79f71f980f819e71e0058 B.Sravani <sravani@napqueens.com> 1732879060 +0530	commit: added few more files
+2ffeff6a151ab96461e79f71f980f819e71e0058 2f103c3956bfe1137d10a0c68bca7bc2cea3f522 B.Sravani <sravani@napqueens.com> 1733319578 +0530	commit: dropped duplicates in asin_keyword_df
+2f103c3956bfe1137d10a0c68bca7bc2cea3f522 568b17045d0613dd7f6a58b209b5481395ac3aa9 B.Sravani <sravani@napqueens.com> 1733324175 +0530	commit: changed asin-keyword-df logic
+568b17045d0613dd7f6a58b209b5481395ac3aa9 4a611091efc5ead5b89d295017ec797e8f9cd8e8 B.Sravani <sravani@napqueens.com> 1733324755 +0530	commit: changed the logic of asin_keyword_df final
+4a611091efc5ead5b89d295017ec797e8f9cd8e8 0306286ffc978bc612612460ed11062601255284 B.Sravani <sravani@napqueens.com> 1733325175 +0530	commit: added new column in asin-keyword-df to mark unique combinations
+0306286ffc978bc612612460ed11062601255284 965bf6e910f154fa83c04d18739672b1617eea07 B.Sravani <sravani@napqueens.com> 1733325993 +0530	commit: added refresh data button and changed download button to link
+965bf6e910f154fa83c04d18739672b1617eea07 59ed93fb5f613c04682fb851b1375ebc383966c1 B.Sravani <sravani@napqueens.com> 1733326148 +0530	commit: unpacked value error is solved
+59ed93fb5f613c04682fb851b1375ebc383966c1 2021f43685efe8300702935f02a38ad96dba879f B.Sravani <sravani@napqueens.com> 1733326559 +0530	commit: added download link logic and validated it
+2021f43685efe8300702935f02a38ad96dba879f 7a039bf77c5faa4a70d1c6c64a61e6a6dbaad4fa B.Sravani <sravani@napqueens.com> 1733327066 +0530	commit: changed all references of asin on the UI to ID and Walmart_ID
+7a039bf77c5faa4a70d1c6c64a61e6a6dbaad4fa b7cf583d45c63d5ada9b7140f58454148da1351d sravani-b-30 <sravani@napqueens.com> 1740142347 +0530	commit: added few files to ignore
+b7cf583d45c63d5ada9b7140f58454148da1351d a0c59a00f0abcf30f18ba8489b0dc4b099005cc5 sravani-b-30 <sravani@napqueens.com> 1740142388 +0530	commit: added few files to ignore
+a0c59a00f0abcf30f18ba8489b0dc4b099005cc5 d8e5d527d880302f70dfba0950a255fa008546f1 sravani-b-30 <sravani@napqueens.com> 1741085549 +0530	commit: Initial commit of the Walmart DataPipeline Scripts
+d8e5d527d880302f70dfba0950a255fa008546f1 dc66d55f894fc08125ebb99811f8bbccd21493f3 sravani-b-30 <sravani@napqueens.com> 1741085716 +0530	commit: Initial commit of the Walmart DataPipeline Scripts

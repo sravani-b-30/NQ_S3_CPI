@@ -1,21 +1,4 @@
 Files
 Data_Preprocessing_WMT
 Walmart_DataPipeline/src/.env
-.git_backup
-category_daily_serp_analysis.py
-concatenation.py
-excel_file.py
-final_cpi_tkinter (4).py
-remaining_asins.py
-List_CPI
-Files
-testing_pipeline.py
-cpi_daily_run_script_v0 (2).py
-git_repo_details.txt
-WMT_product_details.csv
-seperate_date_files.py
-blue-tees-golf_data_log.log
-SP-API.zip
-update_product.log
-Pipeline\cpi_data_pipeline_v0.py
-Pipeline\testing.py
+.git_backups

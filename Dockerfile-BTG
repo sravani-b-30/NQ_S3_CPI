@@ -1,0 +1,21 @@
+# Use an official Python runtime as a base image
+FROM python:3.9-slim
+
+# Set the working directory inside the container
+WORKDIR /app
+
+# Copy the requirements file into the container at /app
+COPY Blue_Tees_Golf/requirements.txt /app/
+
+# Install any Python dependencies required by our app
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of our app's code into the container
+COPY . /app
+
+# Expose the port Streamlit uses (default is 8501)
+EXPOSE 8504
+
+# Command to run the app
+CMD ["streamlit", "run", "Blue_Tees_Golf/Blue_Tees_Golf_CPI.py", "--server.port=8504", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]
+

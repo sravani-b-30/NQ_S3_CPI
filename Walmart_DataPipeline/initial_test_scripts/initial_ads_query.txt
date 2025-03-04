@@ -1,0 +1,32 @@
+SELECT COALESCE(ad_sales_wmt."Date", total_sales_wmt."Date") AS "Date",
+            COALESCE(ad_sales_wmt."Item Id", total_sales_wmt."Item ID") AS item_id,
+            COALESCE(ad_sales_wmt.anarix_id, total_sales_wmt.anarix_id::text) AS anarix_id,
+            COALESCE(ad_sales_wmt.impressions, NULL::numeric) AS impressions,
+            COALESCE(ad_sales_wmt.clicks, NULL::numeric) AS clicks,
+            COALESCE(ad_sales_wmt.ad_spend, NULL::numeric) AS ad_spend,
+            COALESCE(ad_sales_wmt.ad_sales, NULL::numeric) AS ad_sales,
+            COALESCE(ad_sales_wmt."Advertised SKU Sales", NULL::numeric) AS "Advertised SKU Sales",
+            COALESCE(ad_sales_wmt."Other SKU Sales", NULL::numeric) AS "Other SKU Sales",
+            COALESCE(ad_sales_wmt.units_sold, NULL::numeric) AS units_sold_ads,
+            COALESCE(ad_sales_wmt."Advertised SKU Units", NULL::numeric) AS "Advertised SKU Units",
+            COALESCE(ad_sales_wmt."Other SKU Units", NULL::numeric) AS "Other SKU Units",
+            COALESCE(total_sales_wmt.units_sold, NULL::numeric) AS units_sold_retail,
+            COALESCE(total_sales_wmt.auth_sales, NULL::numeric) AS auth_sales,
+            COALESCE(ad_sales_wmt."Orders", NULL::numeric) AS "Orders",
+            COALESCE(ad_sales_wmt."Brand Attributed Sales", NULL::numeric) AS "Brand Attributed Sales",
+            COALESCE(ad_sales_wmt."Direct Attributed Sales", NULL::numeric) AS "Direct Attributed Sales",
+            COALESCE(ad_sales_wmt."Instore Attributed Sales", NULL::numeric) AS "Instore Attributed Sales",
+            COALESCE(ad_sales_wmt."Instore Orders", NULL::numeric) AS "Instore Orders",
+            COALESCE(ad_sales_wmt."Instore Other Sales", NULL::numeric) AS "Instore Other Sales",
+            COALESCE(ad_sales_wmt."Instore Units Sold", NULL::numeric) AS "Instore Units Sold",
+            COALESCE(ad_sales_wmt."NTB Orders", NULL::numeric) AS "NTB Orders",
+            COALESCE(ad_sales_wmt."NTB Units Sold", NULL::numeric) AS "NTB Units Sold",
+            COALESCE(ad_sales_wmt."NTB Sales", NULL::numeric) AS "NTB Sales",
+            COALESCE(ad_sales_wmt."Related Attributed Sales", NULL::numeric) AS "Related Attributed Sales",
+            COALESCE(total_sales_wmt.gmv, NULL::numeric) AS gmv
+        FROM powerbi.walmartadsalesview ad_sales_wmt
+            FULL JOIN powerbi.walmart_orders1p_napqueen total_sales_wmt 
+            ON total_sales_wmt."Date" = ad_sales_wmt."Date" 
+            AND total_sales_wmt."Item ID" = ad_sales_wmt."Item Id" 
+            AND total_sales_wmt.anarix_id::text = ad_sales_wmt.anarix_id
+        WHERE COALESCE(ad_sales_wmt.anarix_id, total_sales_wmt.anarix_id::text) = ANY (ARRAY['NAPQUEEN_1P'::text, 'NAPQUEEN_3P'::text]);

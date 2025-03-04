@@ -1,0 +1,17 @@
+walmart-data-pipeline/
+│── src/                        # Source code directory
+│   │── config.py               # Configuration settings (DB, API keys)
+│   │── logger.py               # Logger setup
+│   │── db_utils.py             # Database interaction functions
+│   │── data_fetching.py        # Fetching data from MongoDB, PostgreSQL
+│   │── data_processing.py      # Data cleaning, transformation
+│   │── walmart_scraper.py      # Web scraping functions
+│   │── s3_utils.py             # Functions for saving data to AWS S3
+│   │── pipeline.py             # Main pipeline execution script
+│── notebooks/                  # Jupyter notebooks for debugging/analysis
+│── tests/                      # Unit tests for different components
+│── data/                       # Store input CSV files (ignored in Git)
+│── requirements.txt            # Dependencies for the project
+│── README.md                   # Documentation about the project
+│── .gitignore                   # Ignore unnecessary files (e.g., `__pycache__`)
+│── setup.py                     # (Optional) Make it installable as a package

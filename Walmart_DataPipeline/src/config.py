@@ -1,6 +1,8 @@
 from dotenv import load_dotenv
 import os
-from logger import logger
+import logging
+
+logger = logging.getLogger("walmart_pipeline")
 
 # Load environment variables from .env file
 load_dotenv()

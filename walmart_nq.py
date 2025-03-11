@@ -529,7 +529,7 @@ st.write("Data last refreshed on:", st.session_state.last_refresh_time)
 
 # Load cached data for session state
 if 'show_features_df' not in st.session_state:
-    _, merged_data_df = get_data(s3_folder)
+    _, merged_data_df, _ = get_data(s3_folder)
     st.session_state['show_features_df'] = merged_data_df
 else:
     merged_data_df = st.session_state['show_features_df']

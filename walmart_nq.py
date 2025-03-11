@@ -1355,10 +1355,10 @@ def run_analysis_button(merged_data_df, asin, price_min, price_max, target_price
 
     st.write(f"Brand: {target_brand}")
 
-    df_napqueen = merged_data_df[(merged_data_df['asin'] == asin) & (merged_data_df['brand'].str.lower() == "napqueen" & "nap queen sleep" & "nap queen")]
-    
-    price_1p = df_napqueen[df_napqueen['channel_type'] == "1P"]['price'].iloc[0] if not df_napqueen[df_napqueen['channel_type'] == "1P"].empty else None
-    price_3p = df_napqueen[df_napqueen['channel_type'] == "3P"]['price'].iloc[0] if not df_napqueen[df_napqueen['channel_type'] == "3P"].empty else None
+    # df_napqueen = merged_data_df[(merged_data_df['asin'] == asin) & (merged_data_df['brand'].str.lower() == "napqueen" & "nap queen sleep" & "nap queen")]
+    df_recent = df_recent[df_recent['asin'] == asin]
+    price_1p = df_recent[df_recent['channel_type'] == "1P"]['price'].iloc[0] if not df_recent[df_recent['channel_type'] == "1P"].empty else None
+    price_3p = df_recent[df_recent['channel_type'] == "3P"]['price'].iloc[0] if not df_recent[df_recent['channel_type'] == "3P"].empty else None
 
 
     # Check if we should perform time-series analysis (only if brand == 'napqueen' and dates are provided)

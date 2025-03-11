@@ -324,7 +324,7 @@ details_key_rename_map = {
 @st.cache_resource
 def load_and_preprocess_data(s3_folder):
     # Load data from the single CSV file
-    merged_data_df = load_latest_csv_from_s3(s3_folder, 'walmart_cpi_napqueen').compute()
+    merged_data_df = load_latest_csv_from_s3(s3_folder, 'merged_data_').compute()
     
     merged_data_df['id'] = merged_data_df['id'].astype(str)
     # Rename columns as specified
@@ -397,14 +397,23 @@ def load_and_preprocess_data(s3_folder):
     unique_products_df = merged_data_df.drop_duplicates(subset='asin').copy()
     # Prepare verification_df with necessary columns
     verification_df = unique_products_df[['asin', 'product_title', 'Product Details']].copy()
-    verification_df['Size'] = unique_products_df['Product Details'].apply(lambda details: details.get('Size', None))
-    verification_df['Style'] = unique_products_df['Product Details'].apply(lambda details: details.get('Style', None))
+    
+    verification_df['Size'] = unique_products_df['Product Details'].apply(
+    lambda details: details.get('Size', None) if isinstance(details, dict) else None
+    )
+    verification_df['Style'] = unique_products_df['Product Details'].apply(
+    lambda details: details.get('Style', None) if isinstance(details, dict) else None
+    )
+    # verification_df['Size'] = unique_products_df['Product Details'].apply(lambda details: details.get('Size', None))
+    # verification_df['Style'] = unique_products_df['Product Details'].apply(lambda details: details.get('Style', None))
 
     # Fill missing values using `product_title`
     verification_df['Size'] = verification_df.apply(lambda row: extract_size(row['product_title']) if pd.isna(row['Size']) else row['Size'], axis=1)
     verification_df['Style'] = verification_df.apply(lambda row: extract_style(row['product_title']) if pd.isna(row['Style']) else row['Style'], axis=1)
 
-    verification_df['Product Dimensions'] = verification_df['Product Details'].apply(lambda details: details.get('Product Dimensions', None))
+    verification_df['Product Dimensions'] = verification_df['Product Details'].apply(
+    lambda details: details.get('Product Dimensions', None) if isinstance(details, dict) else None
+    )
 
     def extract_style_from_dimensions(dimensions):
         if isinstance(dimensions, str):
@@ -465,7 +474,9 @@ def load_and_preprocess_data(s3_folder):
     # asin_keyword_df = asin_keyword_df.reset_index(drop=True , inplace=True)
     # asin_keyword_df = (asin_keyword_df.groupby('asin', as_index=False).agg({'keyword': lambda x: list(set(x))}))
 
-    return asin_keyword_df, merged_data_df
+    ads_data_df = load_latest_csv_from_s3(s3_folder, 'napqueen_ads_data.csv').compute()
+
+    return asin_keyword_df, merged_data_df , ads_data_df
 
 def clear_cache():
     """Clears the cache for load_and_preprocess_data."""
@@ -479,13 +490,14 @@ def get_data(s3_folder, refresh=False):
         st.session_state.last_refresh_time = datetime.now()
     
     # Fetch the data (from cache or fresh)
-    asin_keyword_df, merged_data_df = load_and_preprocess_data(s3_folder)
+    asin_keyword_df, merged_data_df, ads_data_df = load_and_preprocess_data(s3_folder)
     
     # Store dataframes in session state
     st.session_state['asin_keyword_df'] = asin_keyword_df
     st.session_state['merged_data_df'] = merged_data_df
+    st.session_state['ads_data_df'] = ads_data_df
 
-    return asin_keyword_df, merged_data_df
+    return asin_keyword_df, merged_data_df, ads_data_df
 
 # Ensure data is loaded into session state during app initialization
 if 'asin_keyword_df' not in st.session_state:
@@ -500,7 +512,7 @@ if "last_refresh_time" not in st.session_state:
 if st.button("Refresh Data"):
     with st.spinner("Refreshing data..."):
         # Force a refresh
-        asin_keyword_df, merged_data_df = get_data(
+        asin_keyword_df, merged_data_df, ads_data_df = get_data(
             s3_folder, refresh=True
         )
         # Update session state
@@ -510,6 +522,7 @@ if st.button("Refresh Data"):
 # Access dataframes directly from session state
 asin_keyword_df = st.session_state['asin_keyword_df']
 merged_data_df = st.session_state['merged_data_df']
+ads_data_df = st.session_state['ads_data_df']
 
 # Display last refresh time
 st.write("Data last refreshed on:", st.session_state.last_refresh_time)
@@ -1009,7 +1022,7 @@ if 'competitor_files' not in st.session_state:
 if 'recompute' not in st.session_state:
     st.session_state['recompute'] = False
 
-def process_date(merged_data_df, asin, date_str, price_min, price_max, compulsory_features, same_brand_option, compulsory_keywords, non_compulsory_keywords):
+def process_date(merged_data_df, asin, date_str, price_min, price_max, compulsory_features, same_brand_option, compulsory_keywords, non_compulsory_keywords, target_price_selection):
     """
     This function processes data for a single date and returns the results.
     """
@@ -1023,9 +1036,27 @@ def process_date(merged_data_df, asin, date_str, price_min, price_max, compulsor
     if df_current_day.empty:
         st.error(f"No data found for date: {date_str}")
         return None
+    
+    # try:
+    #     target_price = df_current_day[df_current_day['asin'] == asin]['price'].values[0]
+    # except IndexError:
+    #     st.error(f"ASIN {asin} not found for date {date_str}")
+    #     return None
 
     try:
-        target_price = df_current_day[df_current_day['asin'] == asin]['price'].values[0]
+        target_price = None
+        if target_price_selection == "1P Price":
+            target_price = df_current_day[(df_current_day['asin'] == asin) & (df_current_day['channel_type'] == "1P")]['price'].iloc[0]
+        elif target_price_selection == "3P Price":
+            target_price = df_current_day[(df_current_day['asin'] == asin) & (df_current_day['channel_type'] == "3P")]['price'].iloc[0]
+        elif target_price_selection == "Both (1P & 3P)":
+            price_1p = df_current_day[(df_current_day['asin'] == asin) & (df_current_day['channel_type'] == "1P")]['price'].iloc[0]
+            price_3p = df_current_day[(df_current_day['asin'] == asin) & (df_current_day['channel_type'] == "3P")]['price'].iloc[0]
+            target_price = (price_1p, price_3p)
+        elif target_price_selection == "User Input":
+            target_price = st.session_state.get('manual_target_price', None)
+        else:
+            target_price = df_current_day[df_current_day['asin'] == asin]['price'].values[0]
     except IndexError:
         st.error(f"ASIN {asin} not found for date {date_str}")
         return None
@@ -1046,7 +1077,7 @@ def process_date(merged_data_df, asin, date_str, price_min, price_max, compulsor
         'competitors': result[7]
     }
 
-def calculate_and_plot_cpi(merged_data_df, asin_list, start_date, end_date, price_min, price_max, compulsory_features, same_brand_option):
+def calculate_and_plot_cpi(merged_data_df, asin_list, start_date, end_date, price_min, price_max, compulsory_features, same_brand_option, target_price_selection):
     asin = asin_list[0]
     dates_to_process = []
 
@@ -1072,7 +1103,7 @@ def calculate_and_plot_cpi(merged_data_df, asin_list, start_date, end_date, pric
             dates_to_process.append(current_date)
             
             st.write(f"Processing date: {current_date}")
-            result = process_date(merged_data_df, asin, pd.to_datetime(current_date), price_min, price_max, compulsory_features, same_brand_option, compulsory_keywords, non_compulsory_keywords)
+            result = process_date(merged_data_df, asin, pd.to_datetime(current_date), price_min, price_max, compulsory_features, same_brand_option, compulsory_keywords, non_compulsory_keywords, target_price_selection)
 
             if result is not None:
                 daily_results = result['result'][:-1]
@@ -1119,41 +1150,41 @@ def calculate_and_plot_cpi(merged_data_df, asin_list, start_date, end_date, pric
     st.subheader("Analysis Results")
     st.dataframe(result_df)
 
-    # # Merge with other necessary data for analysis
-    # price_data_df_filtered = price_data_df[price_data_df['Ad Type'] == 'SP']
-    # napqueen_df = price_data_df_filtered
-    # #napqueen_df['Date'] = pd.to_datetime(napqueen_df['Date'], format='%d-%m-%Y', errors='coerce')
-    # napqueen_df = napqueen_df.rename(columns={'asin': 'ASIN' , 'date' : 'Date'})
+    # Merge with other necessary data for analysis
+    # price_data_df_filtered = ads_data_df[ads_data_df['Ad Type'] == 'SP']
+    napqueen_df = ads_data_df.copy()
+    #napqueen_df['Date'] = pd.to_datetime(napqueen_df['Date'], format='%d-%m-%Y', errors='coerce')
+    napqueen_df = napqueen_df.rename(columns={'asin': 'ASIN' , 'date' : 'Date'})
 
-    # # Clean and ensure consistent data in ASIN columns
-    # result_df['ASIN'] = result_df['ASIN'].str.upper().str.strip()  # Convert to uppercase and remove spaces
-    # napqueen_df['ASIN'] = napqueen_df['ASIN'].str.upper().str.strip()
+    # Clean and ensure consistent data in ASIN columns
+    result_df['ASIN'] = result_df['ASIN'].str.upper().str.strip()  # Convert to uppercase and remove spaces
+    napqueen_df['ASIN'] = napqueen_df['ASIN'].str.upper().str.strip()
 
-    # # Ensure consistent Date format in both DataFrames
-    # result_df['Date'] = pd.to_datetime(result_df['Date'], format='%Y-%m-%d')
-    # napqueen_df['Date'] = pd.to_datetime(napqueen_df['Date'], format='%Y-%m-%d', errors='coerce')
+    # Ensure consistent Date format in both DataFrames
+    result_df['Date'] = pd.to_datetime(result_df['Date'], format='%Y-%m-%d')
+    napqueen_df['Date'] = pd.to_datetime(napqueen_df['Date'], format='%Y-%m-%d', errors='coerce')
 
-    # # Investigate mixed data types and force consistent types if necessary
-    # napqueen_df['ad_spend'] = pd.to_numeric(napqueen_df['ad_spend'], errors='coerce')
-    # napqueen_df['orderedunits'] = pd.to_numeric(napqueen_df['orderedunits'], errors='coerce')
-    # napqueen_df['orderedrevenueamount'] = pd.to_numeric(napqueen_df['orderedrevenueamount'], errors='coerce')
+    # Investigate mixed data types and force consistent types if necessary
+    napqueen_df['ad_spend'] = pd.to_numeric(napqueen_df['ad_spend'], errors='coerce')
+    napqueen_df['orderedunits'] = pd.to_numeric(napqueen_df['orderedunits'], errors='coerce')
+    napqueen_df['orderedrevenueamount'] = pd.to_numeric(napqueen_df['orderedrevenueamount'], errors='coerce')
 
 
-    # try:
-    #     #result_df['Date'] = pd.to_datetime(result_df['Date'], format='%d-%m-%Y')
-    #     result_df = pd.merge(result_df, napqueen_df[['Date', 'ASIN', 'ad_spend', 'orderedunits', 'orderedrevenueamount']], on=['Date', 'ASIN'], how='left')
+    try:
+        #result_df['Date'] = pd.to_datetime(result_df['Date'], format='%d-%m-%Y')
+        result_df = pd.merge(result_df, napqueen_df[['Date', 'ASIN', 'ad_spend', 'orderedunits', 'orderedrevenueamount']], on=['Date', 'ASIN'], how='left')
 
-    #     st.success("Merging successful! Displaying the merged dataframe:")
-    #     st.dataframe(result_df)
+        st.success("Merging successful! Displaying the merged dataframe:")
+        st.dataframe(result_df)
 
-    # except KeyError as e:
-    #     st.error(f"KeyError: {e} - Likely missing columns during merging.")
-    # except Exception as e:
-    #     st.error(f"An error occurred: {e}")
+    except KeyError as e:
+        st.error(f"KeyError: {e} - Likely missing columns during merging.")
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
 
     # Plot the results
     st.subheader("Time-Series Analysis Results")
-    plot_results(result_df, asin_list, start_date, end_date, selected_ax4_column)
+    plot_results(result_df, asin_list, start_date, end_date, selected_ax4_column, target_price_selection)
 
     if not combined_competitor_df.empty:
         st.subheader("Combined Competitor Data for Selected Date Range")
@@ -1188,7 +1219,7 @@ def plot_competitor_vs_null_analysis(competitor_count_per_day, null_price_count_
     st.pyplot(fig)
 
 
-def plot_results(result_df, asin_list, start_date, end_date, selected_ax4_column):
+def plot_results(result_df, asin_list, start_date, end_date, selected_ax4_column, target_price_selection):
 
     for asin in asin_list:
         asin_results = result_df[result_df['ASIN'] == asin]
@@ -1208,28 +1239,34 @@ def plot_results(result_df, asin_list, start_date, end_date, selected_ax4_column
         # Plot Price on ax2
         ax2 = ax1.twinx()
         ax2.set_ylabel('Price', color='tab:orange')
-        ax2.plot(pd.to_datetime(asin_results['Date']), asin_results['Target Price'], label='Price', linestyle='--', color='tab:orange')
+        if isinstance(asin_results['Target Price'].iloc[0], tuple):
+            ax2.plot(pd.to_datetime(asin_results['Date']), [p[0] for p in asin_results['Target Price']], label='1P Price', linestyle='-', color='tab:green')
+            ax2.plot(pd.to_datetime(asin_results['Date']), [p[1] for p in asin_results['Target Price']], label='3P Price', linestyle='-', color='tab:red')
+        else:
+            ax2.plot(pd.to_datetime(asin_results['Date']), asin_results['Target Price'], label='Target Price', linestyle='--', color='tab:orange')
+        # ax2.plot(pd.to_datetime(asin_results['Date']), asin_results['Target Price'], label='Price', linestyle='--', color='tab:orange')
         ax2.tick_params(axis='y', labelcolor='tab:orange')
-
-        # # Plot Ad Spend on ax3
-        # ax3 = ax1.twinx()
-        # ax3.spines['right'].set_position(('outward', 60))  # Offset the axis to the right
-        # ax3.set_ylabel('Ad Spend', color='tab:green')
-        # ax3.plot(pd.to_datetime(asin_results['Date']), asin_results['ad_spend'], label='Ad Spend', linestyle='-.', color='tab:green')
-        # ax3.tick_params(axis='y', labelcolor='tab:green')
-
-        # # Plot Ordered Units on ax4
-        # ax4 = ax1.twinx()
-        # ax4.spines['right'].set_position(('outward', 120))  # Offset further to the right
-        # ax4.set_ylabel('Ordered Units' if selected_ax4_column == 'orderedunits' else 'Ordered Revenue Amount', color='tab:purple')
-        # ax4.plot(
-        #     pd.to_datetime(asin_results['Date']),
-        #     asin_results[selected_ax4_column],  # Select column based on user choice
-        #     label='Ordered Units' if selected_ax4_column == 'orderedunits' else 'Ordered Revenue Amount',
-        #     color='tab:purple'
-        # )
-        # ax4.tick_params(axis='y', labelcolor='tab:purple')
         
+        if asin_results['brand'].iloc[0] == 'napqueen' or 'nap queen' or 'nap queen sleep':
+            # Plot Ad Spend on ax3
+            ax3 = ax1.twinx()
+            ax3.spines['right'].set_position(('outward', 60))  # Offset the axis to the right
+            ax3.set_ylabel('Ad Spend', color='tab:green')
+            ax3.plot(pd.to_datetime(asin_results['Date']), asin_results['ad_spend'], label='Ad Spend', linestyle='-.', color='tab:green')
+            ax3.tick_params(axis='y', labelcolor='tab:green')
+
+            # Plot Ordered Units on ax4
+            ax4 = ax1.twinx()
+            ax4.spines['right'].set_position(('outward', 120))  # Offset further to the right
+            ax4.set_ylabel('Ordered Units' if selected_ax4_column == 'orderedunits' else 'Ordered Revenue Amount', color='tab:purple')
+            ax4.plot(
+                pd.to_datetime(asin_results['Date']),
+                asin_results[selected_ax4_column],  # Select column based on user choice
+                label='Ordered Units' if selected_ax4_column == 'orderedunits' else 'Ordered Revenue Amount',
+                color='tab:purple'
+            )
+            ax4.tick_params(axis='y', labelcolor='tab:purple')
+            
         # Add title and ensure everything fits
         plt.title(f'CPI Score and Price Over Time for ASIN {asin}')#Ad Spend, and {selected_ax4_column} Over Time for ASIN {asin}')
         fig.tight_layout()
@@ -1275,7 +1312,7 @@ def plot_distribution_graph(result_df, asin, selected_date):
 
     st.plotly_chart(fig)
 
-def run_analysis_button(merged_data_df, asin, price_min, price_max, target_price, start_date, end_date, same_brand_option, compulsory_features):
+def run_analysis_button(merged_data_df, asin, price_min, price_max, target_price, start_date, end_date, same_brand_option, compulsory_features , price_selection):
     # Set recompute flag
     st.session_state['recompute'] = True
     
@@ -1318,10 +1355,21 @@ def run_analysis_button(merged_data_df, asin, price_min, price_max, target_price
 
     st.write(f"Brand: {target_brand}")
 
+    df_napqueen = merged_data_df[(merged_data_df['asin'] == asin) & (merged_data_df['brand'].str.lower() == "napqueen" & "nap queen sleep" & "nap queen")]
+    
+    price_1p = df_napqueen[df_napqueen['channel_type'] == "1P"]['price'].iloc[0] if not df_napqueen[df_napqueen['channel_type'] == "1P"].empty else None
+    price_3p = df_napqueen[df_napqueen['channel_type'] == "3P"]['price'].iloc[0] if not df_napqueen[df_napqueen['channel_type'] == "3P"].empty else None
+
+
     # Check if we should perform time-series analysis (only if brand == 'napqueen' and dates are provided)
-    if target_brand.upper() == "NAPQUEEN" and start_date and end_date:
-        perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, df_recent, compulsory_keywords, non_compulsory_keywords, generate_csv=generate_csv_option)
-        calculate_and_plot_cpi(merged_data_df, [asin], start_date, end_date, price_min, price_max, compulsory_features, same_brand_option)
+    if target_brand.upper() == "NAPQUEEN" or "NAP QUEEN SLEEP" or "NAP QUEEN" and price_selection == 'Both (1P & 3P)' and start_date and end_date:
+         if price_1p is not None:
+            st.subheader("Scatter Plot for 1P Price")
+            perform_scatter_plot(asin, price_1p, price_min, price_max, compulsory_features, same_brand_option, df_recent, compulsory_keywords, non_compulsory_keywords, generate_csv=False, price_selection='1P Price')
+         if price_3p is not None:
+            st.subheader("Scatter Plot for 3P Price")
+            perform_scatter_plot(asin, price_3p, price_min, price_max, compulsory_features, same_brand_option, df_recent, compulsory_keywords, non_compulsory_keywords, generate_csv=False, price_selection='3P Price')   
+         calculate_and_plot_cpi(merged_data_df, [asin], start_date, end_date, price_min, price_max, compulsory_features, same_brand_option)   
     else:
         # Perform scatter plot only
         perform_scatter_plot(asin, target_price, price_min, price_max, compulsory_features, same_brand_option, df_recent, compulsory_keywords, non_compulsory_keywords, generate_csv=generate_csv_option)
@@ -1365,8 +1413,55 @@ with col2:
 with col3:
     price_max = st.number_input("Price Max", value=0.00)
 
-# Target price input
-target_price = st.number_input("Product Price", value=0.00)
+# # Target price input
+# target_price = st.number_input("Product Price", value=0.00)
+
+# Get ASIN details if it exists
+if asin and asin in merged_data_df['asin'].values:
+    asin_data = merged_data_df[merged_data_df['asin'] == asin]
+
+    # Extract brand name (convert to lowercase for consistency)
+    brand_name = asin_data['brand'].str.lower().iloc[0]
+
+    # Extract available prices from 1P and 3P
+    price_1p = asin_data[asin_data['channel_type'] == "1P"]['price'].iloc[0] if not asin_data[asin_data['channel_type'] == "1P"].empty else None
+    price_3p = asin_data[asin_data['channel_type'] == "3P"]['price'].iloc[0] if not asin_data[asin_data['channel_type'] == "3P"].empty else None
+    price = asin_data['price'].iloc[0]
+
+    # Initialize price selection options
+    price_options = []
+
+    if brand_name == "napqueen" or brand_name == "nap queen sleep" or brand_name == "nap queen":
+        # If NapQueen ASIN has both 1P and 3P, provide full selection options
+        if price_1p is not None and price_3p is not None:
+            price_options = ['1P Price', '3P Price', 'Both (1P & 3P)', 'User Input']
+        elif price_1p is not None:
+            price_options = ['1P Price', 'User Input']
+        elif price_3p is not None:
+            price_options = ['3P Price', 'User Input']
+        else:
+            price_options = ['User Input']  # No price found, only allow manual input
+    else:
+        # For non-NapQueen brands, provide only the available price or user input
+        available_price = price if price is not None else None
+        if available_price is not None:
+            price_options = ['Available Price', 'User Input']
+        else:
+            price_options = ['User Input']
+
+    # Display selection dropdown
+    price_selection = st.radio("Choose Target Price Source:", price_options)
+
+    # Set target price based on selection
+    if price_selection == "User Input":
+        target_price = st.number_input("Enter Target Price", value=0.00)
+    else:
+        target_price = price_1p if price_selection == "1P Price" else price_3p if price_selection == "3P Price" else price_1p and price_3p if price_selection == "Both (1P & 3P)" else available_price if price_selection == "Available Price" else None
+else:
+    st.error("ASIN not found in dataset.")
+    price_selection = None
+    target_price = None
+
 
 generate_csv_option = st.checkbox("Generate CSV file for download", value=True)
 
@@ -1530,4 +1625,4 @@ if 'same_brand_option' not in st.session_state:
     st.session_state['same_brand_option'] = same_brand_option
 
 if st.button("Analyze"):
-    run_analysis_button(merged_data_df, asin, price_min, price_max, target_price, start_date, end_date, same_brand_option, compulsory_features)
+    run_analysis_button(merged_data_df, asin, price_min, price_max, target_price, start_date, end_date, same_brand_option, compulsory_features, price_selection)

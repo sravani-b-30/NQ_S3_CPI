@@ -382,7 +382,7 @@ def fetch_serp_data(updated_df):
     cursor = conn.cursor()
 
     end_date = datetime.now().date()
-    start_date = end_date - timedelta(days=7)
+    start_date = end_date - timedelta(days=1)
 
     logger.info(f"Fetching SERP data from {start_date} to {end_date}")
     
@@ -859,20 +859,20 @@ def scrapper_handler(df, bucket_name, brand, file_name="NAPQUEEN.csv", num_worke
 
     # Run parallel scraping for remaining ASINs
     if asins:
-        logger.info(f"Starting parallel scraping with {num_workers} workers.")
-        logger.info(f"Retaining old scrapped file")
-        updated_df = existing_df
-        logger.info(updated_df.shape)
-        # try:
-        #     parallel_scrape(asins, num_workers, file_name)
+        # logger.info(f"Starting parallel scraping with {num_workers} workers.")
+        # logger.info(f"Retaining old scrapped file")
+        # updated_df = existing_df
+        # logger.info(updated_df.shape)
+        try:
+            parallel_scrape(asins, num_workers, file_name)
 
-        #     # Load the updated local file after scraping
-        #     scraped_data = pd.read_csv(file_name, on_bad_lines='skip')
-        #     updated_df = pd.concat([existing_df, scraped_data], ignore_index=True)
-        #     logger.info("Scraping completed and data appended to the S3 file.")
-        # except Exception as e:
-        #     logger.error(f"Error during parallel scraping: {e}")
-        #     updated_df = existing_df  # Use existing data if scraping fails
+            # Load the updated local file after scraping
+            scraped_data = pd.read_csv(file_name, on_bad_lines='skip')
+            updated_df = pd.concat([existing_df, scraped_data], ignore_index=True)
+            logger.info("Scraping completed and data appended to the S3 file.")
+        except Exception as e:
+            logger.error(f"Error during parallel scraping: {e}")
+            updated_df = existing_df  # Use existing data if scraping fails
     else:
         logger.info("No new ASINs to scrape.")
         updated_df = existing_df
@@ -1043,7 +1043,7 @@ if __name__ == '__main__':
     df_product_data = fetch_and_merge_product_data(df_serp)
 
     end_date = datetime.now().date()
-    start_date = end_date - timedelta(days=7)
+    start_date = end_date - timedelta(days=1)
     sp_api_data = fetch_and_enrich_price_data_by_date_range()
 
     final_combined_data = align_and_combine_serp_and_sp_api_data(df_product_data, sp_api_data)

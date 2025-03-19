@@ -1213,7 +1213,7 @@ def query_and_save_to_s3(brand):
     )
     cursor = conn.cursor()
 
-    if brand == "EUROPEAN_HOME_DESIGNS":
+    if brand == brand:
         query = """
         SELECT vendor_data."Ad Type",
             vendor_data.date,

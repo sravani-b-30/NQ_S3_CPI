@@ -1215,145 +1215,49 @@ def query_and_save_to_s3(brand):
 
     if brand == "EUROPEAN_HOME_DESIGNS":
         query = """
-        SELECT "Ad Type", "date", asin, ads_date_ref, tsales_date_ref, anarix_id, impressions, clicks, ad_spend, units_sold, ad_sales, shippedunits_m, shippedrevenueamount_m, orderedunits_m, orderedrevenueamount_m, shippedunits_s, shippedrevenueamount_s
-        FROM advertising.amazon_sp_seller_and_vendor_ehd;
+        SELECT vendor_data."Ad Type",
+            vendor_data.date,
+            vendor_data.asin,
+            vendor_data.ads_date_ref,
+            vendor_data.tsales_date_ref,
+            vendor_data.anarix_id,
+            sum(vendor_data.impressions) AS impressions,
+            sum(vendor_data.clicks) AS clicks,
+            sum(vendor_data.ad_spend) AS ad_spend,
+            sum(vendor_data.units_sold) AS units_sold,
+            sum(vendor_data.ad_sales) AS ad_sales,
+            sum(vendor_data.shippedunits) AS shippedunits,
+            sum(vendor_data.shippedrevenueamount) AS shippedrevenueamount,
+            sum(vendor_data.orderedunits) AS orderedunits,
+            sum(vendor_data.orderedrevenueamount) AS orderedrevenueamount,
+            vendor_data.distributor_final AS distributor
+            FROM advertising.anarix_vendor vendor_data
+            where vendor_data.anarix_id = 'NAAR_RUGS_SELLER'
+            GROUP BY vendor_data."Ad Type", vendor_data.date, vendor_data.asin, vendor_data.ads_date_ref, vendor_data.tsales_date_ref, vendor_data.anarix_id, vendor_data.distributor_final
+            HAVING sum(COALESCE(vendor_data.impressions, 0::numeric)) <> 0::numeric OR sum(COALESCE(vendor_data.clicks, 0::numeric)) <> 0::numeric OR sum(COALESCE(vendor_data.ad_spend, 0::numeric)) <> 0::numeric OR sum(COALESCE(vendor_data.units_sold, 0::numeric)) <> 0::numeric OR sum(COALESCE(vendor_data.ad_sales, 0::numeric)) <> 0::numeric OR sum(COALESCE(vendor_data.shippedunits, 0::numeric)) <> 0::numeric OR sum(COALESCE(vendor_data.shippedrevenueamount, 0::numeric)) <> 0::numeric OR sum(COALESCE(vendor_data.orderedunits, 0::numeric)) <> 0::numeric OR sum(COALESCE(vendor_data.orderedrevenueamount, 0::numeric)) <> 0::numeric
+        UNION
+        SELECT seller_data."Ad Type",
+            seller_data.date,
+            seller_data.asin,
+            seller_data.ads_date_ref,
+            seller_data.tsales_date_ref,
+            seller_data.anarix_id,
+            sum(seller_data.impressions) AS impressions,
+            sum(seller_data.clicks) AS clicks,
+            sum(seller_data.ad_spend) AS ad_spend,
+            sum(seller_data.units_sold) AS units_sold,
+            sum(seller_data.ad_sales) AS ad_sales,
+            sum(seller_data.shippedunits) AS shippedunits,
+            sum(seller_data.shippedrevenueamount) AS shippedrevenueamount,
+            sum(seller_data.orderedunits) AS orderedunits,
+            sum(seller_data.orderedrevenueamount) AS orderedrevenueamount,
+            seller_data.distributor_final AS distributor
+        FROM advertising.anarix_seller seller_data
+        where seller_data.anarix_id = 'NAAR_RUGS_SELLER'
+        GROUP BY seller_data."Ad Type", seller_data.date, seller_data.asin, seller_data.ads_date_ref, seller_data.tsales_date_ref, seller_data.anarix_id, seller_data.distributor_final
+        HAVING sum(COALESCE(seller_data.impressions, 0::numeric)) <> 0::numeric OR sum(COALESCE(seller_data.clicks, 0::numeric)) <> 0::numeric OR sum(COALESCE(seller_data.ad_spend, 0::numeric)) <> 0::numeric OR sum(COALESCE(seller_data.units_sold, 0::numeric)) <> 0::numeric OR sum(COALESCE(seller_data.ad_sales, 0::numeric)) <> 0::numeric OR sum(COALESCE(seller_data.shippedunits, 0::numeric)) <> 0::numeric OR sum(COALESCE(seller_data.shippedrevenueamount, 0::numeric)) <> 0::numeric OR sum(COALESCE(seller_data.orderedunits, 0::numeric)) <> 0::numeric OR sum(COALESCE(seller_data.orderedrevenueamount, 0::numeric)) <> 0::numeric;
         """
-        file_name_ = "ehd_price_data.csv"
-    elif brand == 'NAPQUEEN':
-        query = """
-        WITH seller_ads AS (
-                 SELECT sp_advertised_product_report.date,
-                    sp_advertised_product_report."advertisedAsin" AS asin,
-                    sp_advertised_product_report.anarix_id::text AS anarix_id,
-                    sum(sp_advertised_product_report.impressions) AS impressions,
-                    sum(sp_advertised_product_report.clicks) AS clicks,
-                    sum(sp_advertised_product_report.spend) AS ad_spend,
-                    sum(sp_advertised_product_report."unitsSoldClicks14d") AS units_sold,
-                    sum(sp_advertised_product_report.sales14d) AS ad_sales
-                   FROM advertising.sp_advertised_product_report
-                  WHERE sp_advertised_product_report.anarix_id::text = 'NAPQUEEN'
-                  GROUP BY sp_advertised_product_report.date, sp_advertised_product_report."advertisedAsin", sp_advertised_product_report.anarix_id
-                ), manufacturing_sales AS (
-                 SELECT vendor_real_time_sales_day_wise_with_shipped_data.shipped_date,
-                    vendor_real_time_sales_day_wise_with_shipped_data.asin,
-                    vendor_real_time_sales_day_wise_with_shipped_data.anarix_id,
-                    sum(vendor_real_time_sales_day_wise_with_shipped_data.shipped_units) AS shippedunits,
-                    sum(vendor_real_time_sales_day_wise_with_shipped_data."shipped_revenue.amount") AS shippedrevenueamount,
-                    sum(vendor_real_time_sales_day_wise_with_shipped_data.ordered_units) AS orderedunits,
-                    sum(vendor_real_time_sales_day_wise_with_shipped_data."ordered_revenue.amount"::numeric(20,2)) AS orderedrevenueamount,
-                    vendor_real_time_sales_day_wise_with_shipped_data.distributor_view
-                   FROM selling_partner_api.vendor_real_time_sales_day_wise_with_shipped_data
-                  WHERE vendor_real_time_sales_day_wise_with_shipped_data.distributor_view = 'MANUFACTURING'::text
-                  and vendor_real_time_sales_day_wise_with_shipped_data.anarix_id = 'NAPQUEEN'
-                  GROUP BY vendor_real_time_sales_day_wise_with_shipped_data.shipped_date, vendor_real_time_sales_day_wise_with_shipped_data.asin, vendor_real_time_sales_day_wise_with_shipped_data.anarix_id, vendor_real_time_sales_day_wise_with_shipped_data.distributor_view
-                ), seller_ads_sb AS (
-                 SELECT sb_ads.date,
-                    COALESCE(x1.asin, 'SB_ASIN_BLANK'::character varying) AS asin,
-                    sb_ads.anarix_id::text AS anarix_id,
-                    sum(sb_ads.impressions) AS impressions,
-                    sum(sb_ads.clicks) AS clicks,
-                    sum(sb_ads.cost) AS ad_spend,
-                    sum(sb_ads."attributedUnitsOrderedNewToBrand14d") AS units_sold,
-                    sum(sb_ads."attributedSales14d") AS ad_sales
-                   FROM advertising.sb_ads
-                     LEFT JOIN adid_asin_map x1 ON sb_ads."adId" = x1.ad_id
-                  WHERE sb_ads.anarix_id::text = 'NAPQUEEN'
-                  GROUP BY x1.asin, sb_ads.date, sb_ads.anarix_id
-                ), seller_ads_sd AS (
-                 SELECT sd_product_ads.date,
-                    sd_product_ads.asin,
-                    sd_product_ads.anarix_id,
-                    sum(sd_product_ads.impressions) AS impressions,
-                    sum(sd_product_ads.clicks) AS clicks,
-                    sum(sd_product_ads.cost) AS ad_spend,
-                    sum(sd_product_ads."viewAttributedUnitsOrdered14d") AS units_sold,
-                    sum(sd_product_ads."viewAttributedSales14d") AS ad_sales
-                   FROM advertising.sd_product_ads
-                  WHERE sd_product_ads.anarix_id::text = 'NAPQUEEN'
-                  GROUP BY sd_product_ads.date, sd_product_ads.asin, sd_product_ads.anarix_id
-                ), seller_ads_sd_target AS (
-                 SELECT sd_product_ads_retarget.date,
-                    sd_product_ads_retarget.asin,
-                    sd_product_ads_retarget.anarix_id,
-                    sum(sd_product_ads_retarget.impressions) AS impressions,
-                    sum(sd_product_ads_retarget.clicks) AS clicks,
-                    sum(sd_product_ads_retarget.cost) AS ad_spend,
-                    sum(sd_product_ads_retarget."viewAttributedUnitsOrdered14d") AS units_sold,
-                    sum(sd_product_ads_retarget."viewAttributedSales14d") AS ad_sales
-                   FROM advertising.sd_product_ads_retarget
-                  WHERE sd_product_ads_retarget.anarix_id::text = 'NAPQUEEN'
-                  GROUP BY sd_product_ads_retarget.asin, sd_product_ads_retarget.date, sd_product_ads_retarget.anarix_id
-                )
-         SELECT 'SP'::text AS "Ad Type",
-            COALESCE(manufacturing_sales.shipped_date, seller_ads.date) AS date,
-            COALESCE(manufacturing_sales.asin, seller_ads.asin) AS asin,
-            seller_ads.date AS ads_date_ref,
-            manufacturing_sales.shipped_date AS tsales_date_ref,
-            COALESCE(manufacturing_sales.anarix_id, seller_ads.anarix_id) AS anarix_id,
-            COALESCE(seller_ads.impressions, 0::numeric) AS impressions,
-            COALESCE(seller_ads.clicks, 0::numeric) AS clicks,
-            COALESCE(seller_ads.ad_spend, 0::numeric) AS ad_spend,
-            COALESCE(seller_ads.units_sold, 0::numeric) AS units_sold,
-            COALESCE(seller_ads.ad_sales, 0::numeric) AS ad_sales,
-            COALESCE(manufacturing_sales.shippedunits, 0::numeric) AS shippedunits,
-            COALESCE(manufacturing_sales.shippedrevenueamount, 0::numeric) AS shippedrevenueamount,
-            COALESCE(manufacturing_sales.orderedunits, 0::numeric) AS orderedunits,
-            COALESCE(manufacturing_sales.orderedrevenueamount, 0::numeric) AS orderedrevenueamount
-           FROM seller_ads
-             FULL JOIN manufacturing_sales ON manufacturing_sales.shipped_date = seller_ads.date AND manufacturing_sales.asin::text = seller_ads.asin::text AND manufacturing_sales.anarix_id = seller_ads.anarix_id
-        UNION
-         SELECT 'SB'::text AS "Ad Type",
-            seller_ads_sb.date,
-            seller_ads_sb.asin,
-            seller_ads_sb.date AS ads_date_ref,
-            NULL::date AS tsales_date_ref,
-            seller_ads_sb.anarix_id,
-            seller_ads_sb.impressions,
-            seller_ads_sb.clicks,
-            seller_ads_sb.ad_spend,
-            seller_ads_sb.units_sold,
-            seller_ads_sb.ad_sales,
-            NULL::numeric AS shippedunits,
-            NULL::numeric AS shippedrevenueamount,
-            NULL::numeric AS orderedunits,
-            NULL::numeric AS orderedrevenueamount
-           FROM seller_ads_sb
-        UNION
-         SELECT 'SD'::text AS "Ad Type",
-            seller_ads_sd.date,
-            seller_ads_sd.asin,
-            seller_ads_sd.date AS ads_date_ref,
-            NULL::date AS tsales_date_ref,
-            seller_ads_sd.anarix_id,
-            seller_ads_sd.impressions,
-            seller_ads_sd.clicks,
-            seller_ads_sd.ad_spend,
-            seller_ads_sd.units_sold,
-            seller_ads_sd.ad_sales,
-            NULL::numeric AS shippedunits,
-            NULL::numeric AS shippedrevenueamount,
-            NULL::numeric AS orderedunits,
-            NULL::numeric AS orderedrevenueamount
-           FROM seller_ads_sd
-        UNION
-         SELECT 'SD'::text AS "Ad Type",
-            seller_ads_sd_target.date,
-            seller_ads_sd_target.asin,
-            seller_ads_sd_target.date AS ads_date_ref,
-            NULL::date AS tsales_date_ref,
-            seller_ads_sd_target.anarix_id,
-            seller_ads_sd_target.impressions,
-            seller_ads_sd_target.clicks,
-            seller_ads_sd_target.ad_spend,
-            seller_ads_sd_target.units_sold,
-            seller_ads_sd_target.ad_sales,
-            NULL::numeric AS shippedunits,
-            NULL::numeric AS shippedrevenueamount,
-            NULL::numeric AS orderedunits,
-            NULL::numeric AS orderedrevenueamount
-           FROM seller_ads_sd_target;
-        """
-        file_name_ = "napqueen_price_tracker.csv"
+        file_name_ = "naar_ads_data.csv"
     else:
             logger.error("Unknown brand specified for fetching sales data")
             return
@@ -1611,7 +1515,7 @@ if __name__ == '__main__':
     )
     
     # Run query and save to S3 for the brand
-    # query_and_save_to_s3(brand=brand)
+    query_and_save_to_s3(brand=brand)
     
     logger.info(f"Completed processing for brand: {brand}\n")
     

@@ -1270,11 +1270,11 @@ def query_and_save_to_s3(brand):
     # Save the result to S3
     save_to_s3(
         df=df1,
-        s3_folder=f'{brand}/',
+        brand=f'{brand}/',
         file_name=file_name_
     )
     
-    logger.info(f"Data for {brand} successfully queried and saved to S3 as {file_name}")
+    logger.info(f"Data for {brand} successfully queried and saved to S3 as {file_name_}.")
 
     # Close the cursor and connection
     cursor.close()

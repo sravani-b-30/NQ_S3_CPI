@@ -1270,7 +1270,7 @@ def query_and_save_to_s3(brand):
     # Save the result to S3
     save_to_s3(
         df=df1,
-        brand=f'{brand}/',
+        brand=brand,
         file_name=file_name_
     )
     

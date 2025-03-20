@@ -1062,7 +1062,7 @@ def fetch_price_tracker_data(marketplace, days=30):
     logger.info(f"Sorted by date: {df.shape}")
     logger.info(f"Sample data for price tracker data after sorting by date : {df.head()}")
 
-    df['date'] = df['Date'].dt.date
+    df['date'] = df['date'].dt.date
     logger.info(f"Datatype of date column : {df['date'].dtype}")
     logger.info(f" Converted date column to date datatype in PriceTracker Data : {df.shape}")
 

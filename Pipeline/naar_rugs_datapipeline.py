@@ -1062,6 +1062,10 @@ def fetch_price_tracker_data(marketplace, days=30):
     logger.info(f"Sorted by date: {df.shape}")
     logger.info(f"Sample data for price tracker data after sorting by date : {df.head()}")
 
+    df['date'] = df['Date'].dt.date
+    logger.info(f"Datatype of date column : {df['date'].dtype}")
+    logger.info(f" Converted date column to date datatype in PriceTracker Data : {df.shape}")
+
     # Close the cursor and connection
     cursor.close()
     conn.close()
@@ -1451,67 +1455,67 @@ if __name__ == '__main__':
     
     logger.info(f"Processing brand: {brand}")
 
-    # df_keyword = active_keyword_ids(brand)
-    # keyword_ids_df = fetch_keyword_ids(df_keyword)
+    df_keyword = active_keyword_ids(brand)
+    keyword_ids_df = fetch_keyword_ids(df_keyword)
 
-    # # #Step 2
-    # serp_df = fetch_serp_data(keyword_ids_df)
+    # #Step 2
+    serp_df = fetch_serp_data(keyword_ids_df)
 
-    # # #Step 3
-    # merged_df = fetch_and_merge_product_data(serp_df)
+    # #Step 3
+    merged_df = fetch_and_merge_product_data(serp_df)
 
-    # processed_serp_df = pre_processing_serp_data(merged_df)
+    processed_serp_df = pre_processing_serp_data(merged_df)
 
-    # #Step 4
-    # price_tracker_df = fetch_price_tracker_data(marketplace="Amazon", days=30)
+    #Step 4
+    price_tracker_df = fetch_price_tracker_data(marketplace="Amazon", days=30)
 
-    # #Step 5
-    # merged_naar_rugs_df = fetch_product_information(price_tracker_df)
+    #Step 5
+    merged_naar_rugs_df = fetch_product_information(price_tracker_df)
 
-    # final_merged_df = cleaning_naar_rugs_data(merged_naar_rugs_df, processed_serp_df)
-    # multiprocessing.freeze_support()
+    final_merged_df = cleaning_naar_rugs_data(merged_naar_rugs_df, processed_serp_df)
+    multiprocessing.freeze_support()
 
 
-    # today_date = datetime.now().strftime('%Y-%m-%d')
-    # file_name = f"serp_data_{today_date}.csv"
-    # save_to_s3(
-    #     df=final_merged_df,
-    #     brand=brand,
-    #     file_name=file_name
-    # )
+    today_date = datetime.now().strftime('%Y-%m-%d')
+    file_name = f"serp_data_{today_date}.csv"
+    save_to_s3(
+        df=final_merged_df,
+        brand=brand,
+        file_name=file_name
+    )
 
-    # #Step 7
-    # file_path = "Pipeline/NAAR_RUGS_PRODUCT_DETAILS.csv"
+    #Step 7
+    file_path = "Pipeline/NAAR_RUGS_PRODUCT_DETAILS.csv"
     
-    # df_scrapped_info = scrapper_handler(
-    # df=final_merged_df,
-    # bucket_name="anarix-cpi",
-    # brand="NAAR_RUGS_SELLER",
-    # file_name="NAAR_RUGS_PRODUCT_DETAILS.csv"
-    # )
+    df_scrapped_info = scrapper_handler(
+    df=final_merged_df,
+    bucket_name="anarix-cpi",
+    brand="NAAR_RUGS_SELLER",
+    file_name="NAAR_RUGS_PRODUCT_DETAILS.csv"
+    )
 
-    # # Save the updated NAPQUEEN.csv to S3
-    # save_to_s3(
-    #     df=df_scrapped_info,
-    #     brand=brand,
-    #     file_name='NAAR_RUGS_PRODUCT_DETAILS.csv'
-    # )
+    # Save the updated NAPQUEEN.csv to S3
+    save_to_s3(
+        df=df_scrapped_info,
+        brand=brand,
+        file_name='NAAR_RUGS_PRODUCT_DETAILS.csv'
+    )
 
-    # logger.info(f"Uploaded {file_name} to S3 bucket 'anarix-cpi' in folder '{brand}/'")
+    logger.info(f"Uploaded {file_name} to S3 bucket 'anarix-cpi' in folder '{brand}/'")
 
-    # final_df = product_details_merge_data(final_merged_df, df_scrapped_info)
+    final_df = product_details_merge_data(final_merged_df, df_scrapped_info)
 
-    # # # Example usage:
-    # today_date = datetime.now().strftime('%Y-%m-%d')
-    # file_name = f'merged_data_{today_date}.csv'
+    # # Example usage:
+    today_date = datetime.now().strftime('%Y-%m-%d')
+    file_name = f'merged_data_{today_date}.csv'
 
-    # #df.to_csv(file_name,index=False)
+    #df.to_csv(file_name,index=False)
     
-    # save_to_s3(
-    #     df=final_df,
-    #     brand=brand,
-    #     file_name=file_name
-    # )
+    save_to_s3(
+        df=final_df,
+        brand=brand,
+        file_name=file_name
+    )
     
     # Run query and save to S3 for the brand
     query_and_save_to_s3(brand=brand)

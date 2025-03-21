@@ -382,22 +382,65 @@ def fetch_serp_data(keyword_ids_df):
     cursor.close()
     conn.close()
 
-    # Concatenate all dataframes into a single dataframe
+    # # Concatenate all dataframes into a single dataframe
+    # all_data_df = pd.concat(dataframes, ignore_index=True)
+    # logger.info(f"Total SERP data fetched: {all_data_df.shape}")
+
+    # # Merge the two DataFrames on keyword_id
+    # merged_df = pd.merge(keyword_ids_df, all_data_df, on='keyword_id')
+
+    # # Rename the scrapped_at column to date
+    # merged_df.rename(columns={'scrapped_at': 'Date' , 'sale_price':'price'}, inplace=True)
+    # logger.info(f"Renamed scrapped_at and sale_price columns from SERP Data : {merged_df.columns}")
+
+    # logger.info(f"Merged SERP data with keyword information: {merged_df.shape}")
+    # logger.info(f"Sample data of merged_df: {merged_df.head()}")
+
+    # logger.info("Process 2: Finishied fetching SERP Data")
+    # return merged_df
     all_data_df = pd.concat(dataframes, ignore_index=True)
     logger.info(f"Total SERP data fetched: {all_data_df.shape}")
+    
+    all_data_df.rename(columns={'scrapped_at': 'Date', 'sale_price': 'price'}, inplace=True)
+    all_data_df['Date'] = pd.to_datetime(all_data_df['Date']).dt.date
+    
+    all_data_df['backfilled'] = 'NO'
+    logger.info(f"Created a new column 'backfilled' with default value 'NO' : {all_data_df.columns}")
+    
+    all_data_df = pd.merge(keyword_ids_df, all_data_df, on='keyword_id', how='left')
+    
+    all_dates = pd.date_range(start=start_date, end=end_date).date
+    logger.info(f"All dates in the date range: {all_dates}")
+    complete_data = []
+    
+    for keyword_id in keyword_id_list:
+        keyword_data = all_data_df[all_data_df['keyword_id'] == keyword_id].copy()
+        keyword_data = keyword_data.sort_values(by='Date')
+        
+        existing_dates = set(keyword_data['Date'].dropna().tolist())
+        missing_dates = [d for d in all_dates if d not in existing_dates]
+        logger.info(f"Missing dates in serp data {keyword_id}: {missing_dates}")
+        
+        for missing_date in missing_dates:
+            available_data = keyword_data[keyword_data['Date'] < missing_date]
+            
+            if not available_data.empty:
+                latest_data = available_data[available_data['Date'] == available_data['Date'].max()].copy()
+                latest_data['Date'] = missing_date
+                latest_data['backfilled'] = 'YES'
+                logger.info(f"Columns after backfilling data for missing dates : {latest_data.columns}")
+                keyword_data = pd.concat([keyword_data, pd.DataFrame([latest_data])], ignore_index=True)
+        
+        complete_data.append(keyword_data)
+    
+    final_df = pd.concat(complete_data, ignore_index=True)
+    final_df.sort_values(by=['keyword_id', 'Date'], inplace=True)
+    
+    logger.info(f"Final dataset shape after backfilling: {final_df.shape}")
+    logger.info(f"Sample data after backfilling: {final_df.head()}")
+    
+    return final_df
 
-    # Merge the two DataFrames on keyword_id
-    merged_df = pd.merge(keyword_ids_df, all_data_df, on='keyword_id')
-
-    # Rename the scrapped_at column to date
-    merged_df.rename(columns={'scrapped_at': 'Date' , 'sale_price':'price'}, inplace=True)
-    logger.info(f"Renamed scrapped_at and sale_price columns from SERP Data : {merged_df.columns}")
-
-    logger.info(f"Merged SERP data with keyword information: {merged_df.shape}")
-    logger.info(f"Sample data of merged_df: {merged_df.head()}")
-
-    logger.info("Process 2: Finishied fetching SERP Data")
-    return merged_df
 
 def fetch_and_merge_product_data(serp_df):
     """
@@ -1148,7 +1191,7 @@ def cleaning_naar_rugs_data(merged_naar_rugs_df, merged_df):
 
     # Step 3: Define full column order
     full_column_order = [
-        'product_id', 'price', 'date', 'keyword_id', 'keyword', 'title', 'asin', 'brand'
+        'asin', 'title', 'price', 'brand', 'product_id', 'date', 'backfilled', 'keyword_id', 'keyword'
     ]
         
     # Step 4: Add missing columns with None values

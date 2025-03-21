@@ -429,7 +429,7 @@ def fetch_serp_data(keyword_ids_df):
                 latest_data['Date'] = missing_date
                 latest_data['backfilled'] = 'YES'
                 logger.info(f"Columns after backfilling data for missing dates : {latest_data.columns}")
-                keyword_data = pd.concat([keyword_data, pd.DataFrame([latest_data])], ignore_index=True)
+                keyword_data = pd.concat([keyword_data, latest_data], ignore_index=True)
         
         complete_data.append(keyword_data)
     

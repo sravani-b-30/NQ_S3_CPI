@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 def fetch_serpkeywords_mongodb(brand):
     """Fetch SERP keywords from MongoDB for a specific brand."""
     client = get_mongo_client()
+    logger.error(f"Couldn't establish a connection to mongoDB in data_fetching.py , client : {client}")
     try:
         collection1 = client["walmartmarketplaceaccounts"]
         collection2 = client["serpkeywords"]

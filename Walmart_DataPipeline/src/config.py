@@ -9,32 +9,32 @@ load_dotenv()
 
 # PostgreSQL Database Configuration
 DB_CONFIG = {
-    "host": os.getenv("DB_HOST"),
-    "port": os.getenv("DB_PORT"),
-    "database": os.getenv("DB_NAME"),
-    "user": os.getenv("DB_USER"),
-    "password": os.getenv("DB_PASSWORD")
+    "host": os.getenv("DB_HOST", "").strip('"'),
+    "port": os.getenv("DB_PORT", "").strip('"'),
+    "database": os.getenv("DB_NAME", "").strip('"'),
+    "user": os.getenv("DB_USER", "").strip('"'),
+    "password": os.getenv("DB_PASSWORD", "").strip('"')
 }
 
 ADS_DB_CONFIG = {
-    "host": os.getenv("DB_HOST"),
-    "port": os.getenv("DB_PORT"),
-    "database": os.getenv("ADS_DB_NAME"),
-    "user": os.getenv("DB_USER"),
-    "password": os.getenv("DB_PASSWORD")
+    "host": os.getenv("DB_HOST", "").strip('"'),
+    "port": os.getenv("DB_PORT", "").strip('"'),
+    "database": os.getenv("ADS_DB_NAME", "").strip('"'),
+    "user": os.getenv("DB_USER", "").strip('"'),
+    "password": os.getenv("DB_PASSWORD", "").strip('"')
 }
 
 # MongoDB Configuration
-MONGO_URI = os.getenv("MONGO_URI")
-DATABASE_NAME = os.getenv("DATABASE_NAME")
+MONGO_URI = os.getenv("MONGO_URI", "").strip('"')
+DATABASE_NAME = os.getenv("DATABASE_NAME", "").strip('"')
 
 # AWS S3 Configuration
-S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
-S3_FOLDER = os.getenv("S3_FOLDER_NAME")
+S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "").strip('"')
+S3_FOLDER = os.getenv("S3_FOLDER_NAME", "").strip('"')
 
 
 # API Keys & Other Secrets
-SMARTPROXY_API_KEY = os.getenv("SMARTPROXY_API_KEY")
+SMARTPROXY_API_KEY = os.getenv("SMARTPROXY_API_KEY", "").strip('"')
 
 # Debugging Mode
 DEBUG = os.getenv("DEBUG", "True").lower() == "true"

@@ -42,7 +42,7 @@ SMARTPROXY_API_KEY = os.getenv("SMARTPROXY_API_KEY")
 DEBUG = os.getenv("DEBUG", "True").lower() == "true"
 
 # Ensure critical environment variables are set
-required_env_vars = ["MONGO_URI", "DATABASE_NAME","DB_HOST","DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD", "SMARTPROXY_API_KEY", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
+required_env_vars = ["MONGO_URI", "DATABASE_NAME","DB_HOST","DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD", "SMARTPROXY_API_KEY"]
 for var in required_env_vars:
     if not os.getenv(var):
         raise ValueError(f"Missing required environment variable: {var}")

@@ -341,7 +341,7 @@ def fetch_serp_data(keyword_ids_df):
 
     # Define the date range
     start_date = datetime.now().date() - timedelta(days=30)
-    end_date = datetime.now().date()
+    end_date = datetime.now().date() - timedelta(days=1)
     logger.info(f"Fetching SERP data from {start_date} to {end_date}")
 
     # Initialize an empty list to collect dataframes

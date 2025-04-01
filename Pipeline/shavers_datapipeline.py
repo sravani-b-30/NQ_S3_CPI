@@ -808,26 +808,52 @@ def scrapper_handler(df, bucket_name, brand, file_name="SHAVERS.csv", num_worker
     df['asin'] = df['asin'].str.upper()
     df_asins = df['asin'].unique().tolist()
     df_asins = [asin for asin in df_asins if asin.startswith('B')]
-
-    total_collected = []
+    
+    try:
+        existing_df = fetch_latest_napqueen_file(bucket_name, brand, file_name)
+        total_collected = existing_df['ASIN'].tolist()
+        asins_to_remove = existing_df[existing_df['Option'] == '{}']['ASIN'].str.upper().unique().tolist()
+        total_collected = [asin for asin in total_collected if asin not in asins_to_remove]
+        logger.info("Loaded existing ASIN data from file.")
+    except FileNotFoundError:
+        logger.warning(f"File not found: {file_name}. Starting with an empty list.")
+        total_collected = []
 
     asins = [asin for asin in df_asins if asin not in total_collected]
 
     logger.info(f"Total ASINs: {len(df_asins)}")
     logger.info(f"Collected ASINs: {len(total_collected)}")
     logger.info(f"Remaining ASINs: {len(asins)}")
+    # total_collected = []
+
+    # asins = [asin for asin in df_asins if asin not in total_collected]
+
+    # logger.info(f"Total ASINs: {len(df_asins)}")
+    # logger.info(f"Collected ASINs: {len(total_collected)}")
+    # logger.info(f"Remaining ASINs: {len(asins)}")
 
 
     if asins:
         logger.info(f"Starting parallel scraping with {num_workers} workers.")
         try:
             parallel_scrape(asins, num_workers, file_name)
-            updated_df = pd.read_csv(file_name, on_bad_lines='skip')
-            logger.info("Scraping completed successfully.")
+
+            # Load the updated local file after scraping
+            scraped_data = pd.read_csv(file_name, on_bad_lines='skip')
+            updated_df = pd.concat([existing_df, scraped_data], ignore_index=True)
+            logger.info("Scraping completed and data appended to the S3 file.")
         except Exception as e:
             logger.error(f"Error during parallel scraping: {e}")
+            updated_df = existing_df  # Use existing data if scraping fails
     else:
         logger.info("No new ASINs to scrape.")
+        updated_df = existing_df
+    #         updated_df = pd.read_csv(file_name, on_bad_lines='skip')
+    #         logger.info("Scraping completed successfully.")
+    #     except Exception as e:
+    #         logger.error(f"Error during parallel scraping: {e}")
+    # else:
+    #     logger.info("No new ASINs to scrape.")
 
     # Save the updated DataFrame to S3
     save_to_s3(

@@ -207,7 +207,7 @@ def scrape_data(asin, max_retries=100):
             drop_down = extract_dropdown_info(soup)
 
             # Validate if key data has been scraped properly
-            if details:
+            if title and rating and details:
                 valid_data = True
                 data = {
                     'ASIN': asin,
@@ -817,6 +817,7 @@ def scrapper_handler(df, bucket_name, brand, file_name="SHAVERS.csv", num_worker
     logger.info(f"Collected ASINs: {len(total_collected)}")
     logger.info(f"Remaining ASINs: {len(asins)}")
 
+
     if asins:
         logger.info(f"Starting parallel scraping with {num_workers} workers.")
         try:
@@ -972,13 +973,20 @@ if __name__ == '__main__':
     # Step 5: Merge with scrapped info for final output
     final_merged_df = product_details_merge_data(final_combined_data, updated_napqueen_df)
 
-    merged_df = process_and_upload_analysis(
+    save_df_to_s3(
+        df=final_merged_df,  # Load the updated file into a DataFrame
         bucket_name='anarix-cpi',
-        new_analysis_df=final_merged_df,
-        brand=brand,
-        prefix="merged_data_",
-        file_extension=".csv"
+        s3_folder=f'{brand}/',
+        file_name=f'merged_data_{today_date}.csv'
     )
+
+    # merged_df = process_and_upload_analysis(
+    #     bucket_name='anarix-cpi',
+    #     new_analysis_df=final_merged_df,
+    #     brand=brand,
+    #     prefix="merged_data_",
+    #     file_extension=".csv"
+    # )
     
     # query_and_save_to_s3(brand=brand)
 

@@ -916,36 +916,15 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
     
     folder_path = f"{brand}/"
     
-    # Step 1: Fetch the latest file
-    try:
-        latest_file_key, last_modified = fetch_latest_file_from_s3(
-            bucket_name, prefix=folder_path + prefix, file_extension=file_extension
-        )
-        logger.info(f"Latest file found: {latest_file_key}, LastModified: {last_modified}")
-        # Load the existing file into a DataFrame
-        obj = s3_client.get_object(Bucket=bucket_name, Key=latest_file_key)
-        existing_df = pd.read_csv(io.BytesIO(obj['Body'].read()))
-        logger.info(f"Loaded existing merged_data file with shape: {existing_df.shape}")
-    except FileNotFoundError:
-        # No existing file, start with the new analysis data
-        existing_df = pd.DataFrame()
-        logger.warning(f"No existing merged_data file found. Starting fresh.")
-
-    # Step 2: Ensure `date` column is in datetime format for both DataFrames
-    if not existing_df.empty:
-        existing_df['date'] = pd.to_datetime(existing_df['date'], errors='coerce')
-
     new_analysis_df['date'] = pd.to_datetime(new_analysis_df['date'], errors='coerce')
 
-    # Step 3: Drop data older than 30 days (rolling window logic)
-    # cutoff_date = today.date() - timedelta(days=31)  # Calculate cutoff date
     cutoff_date = pd.Timestamp(today.date() - timedelta(days=30))
-    if not existing_df.empty:
-        existing_df = existing_df[existing_df['date'] >= cutoff_date]  # Retain only last 30 days
-        logger.info(f"Dropped data older than {cutoff_date}. Remaining data shape: {existing_df.shape}")
+    if not new_analysis_df.empty:
+        new_analysis_df = new_analysis_df[new_analysis_df['date'] >= cutoff_date]  # Retain only last 30 days
+        logger.info(f"Dropped data older than {cutoff_date}. Remaining data shape: {new_analysis_df.shape}")
 
     # Step 4: Append new data to existing DataFrame
-    updated_df = pd.concat([existing_df, new_analysis_df], ignore_index=True)
+    updated_df = new_analysis_df
     logger.info(f"Appended new data. Combined DataFrame shape: {updated_df.shape}")
 
     # Step 5: Enforce rolling 30-day window after concatenation
@@ -962,13 +941,6 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
 
     logger.info("DataFrame successfully written to CSV in memory, preparing for S3 upload.")
    
-    # try:
-    #     s3_client.put_object(Bucket=bucket_name, Key=new_file_name, Body=csv_buffer.getvalue())
-    #     logger.info(f"Uploaded updated file: {new_file_name} to S3 bucket: {bucket_name}")
-    # except Exception as e:
-    #     logger.error(f"Failed to upload file {new_file_name} to S3. Error: {e}")
-    #     raise
-    
     upload_csv_to_s3(
     bucket_name='anarix-cpi',
     key=new_file_name,

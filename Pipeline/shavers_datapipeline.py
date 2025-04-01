@@ -844,7 +844,8 @@ def scrapper_handler(df, bucket_name, brand, file_name="SHAVERS.csv", num_worker
     if asins:
         logger.info(f"Starting parallel scraping with {num_workers} workers.")
         try:
-            updated_df = parallel_scrape(asins, num_workers, file_name)
+            parallel_scrape(asins, num_workers, file_name)
+            updated_df = pd.read_csv(file_name, on_bad_lines='skip')
             logger.info("Scraping completed successfully.")
         except Exception as e:
             logger.error(f"Error during parallel scraping: {e}")

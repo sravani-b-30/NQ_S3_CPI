@@ -648,7 +648,7 @@ def fetch_price_tracker_data(marketplace, days=30):
     # Establish connection to the database
     conn = pg8000.connect(
         host="postgresql-88164-0.cloudclusters.net",
-        database="generic",
+        database="amazon",
         user="Pgstest",
         password="testwayfair",
         port=10102
@@ -1079,14 +1079,10 @@ def fetch_price_tracker_data(marketplace, days=30):
     # SQL query to fetch the price tracker data for the specified marketplace and date range
     placeholders = ', '.join(['%s'] * len(naar_rugs_product_ids))
     query = f"""
-    SELECT "Date", "MarketPlace", "product_ID", availability, "listingPrice", "listPrice", "landedPrice", "shippingPrice", 
-           "BSR_CategoryId1", "BSR_CategoryId1_rank", "BSR_CategoryId2", "BSR_CategoryId2_rank", 
-           "sellerFeedbackCount", "sellerPositiveFeedbackRating", "size", thickness, 
-           "BSR_CategoryId3", "BSR_CategoryId3_rank"
-    FROM "Records"."PriceTracker"
-    WHERE "MarketPlace" = '{marketplace}'
-    AND "product_ID" IN ({placeholders})
-    AND "Date" >= CURRENT_DATE - INTERVAL '{days} days';
+    SELECT "report_created_at", "product_id", "price", "open_date"
+    FROM "selling_partner_api"."merchant_listing_report"
+    WHERE "product_id" IN ({placeholders})
+    AND "report_created_at" >= CURRENT_DATE - INTERVAL '{days} days';
     """
 
     # Execute the query
@@ -1097,8 +1093,8 @@ def fetch_price_tracker_data(marketplace, days=30):
     # Fetch results and load them into a DataFrame
     df = pd.DataFrame(cursor.fetchall(), columns=[desc[0] for desc in cursor.description])
     
-    df.rename(columns= {"product_ID" : "asin", "Date" : "date", "listingPrice" : "price"}, inplace=True)
-    logger.info(f"Renamed product_ID to asin and Date to date and listingPrice to price : {df.shape}")
+    df.rename(columns= {"product_id" : "asin", "report_created_at" : "date"}, inplace=True)
+    logger.info(f"Renamed product_id to asin and report_created_at to date: {df.shape}")
     
     df['date'] = pd.to_datetime(df['date'])
     df = df.sort_values(by='date')

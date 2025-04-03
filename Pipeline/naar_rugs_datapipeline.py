@@ -1086,12 +1086,12 @@ def fetch_price_tracker_data(marketplace, days=30):
     SELECT "report_created_at", "product_id", "price", "open_date"
     FROM "selling_partner_api"."merchant_listing_report"
     WHERE "product_id" IN ({placeholders})
-    AND "report_created_at" BETWEEN {start_date} AND {end_date}
+    AND "report_created_at" BETWEEN %s AND %s
     ORDER BY "report_created_at" DESC;
     """
 
     # Execute the query
-    params = list(naar_rugs_product_ids) 
+    params = list(naar_rugs_product_ids) + [start_date, end_date]
     cursor.execute(query, params)
     logger.info(f"Executed price tracker query to fetch Naar Rugs Product Prices successfully.")
 

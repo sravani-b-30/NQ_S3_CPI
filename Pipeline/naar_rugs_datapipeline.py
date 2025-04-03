@@ -1075,25 +1075,32 @@ def fetch_price_tracker_data(marketplace, days=30):
     
     naar_rugs_product_ids = [pid.strip() for pid in product_ids_raw.splitlines() if pid.strip()]
     logger.info(f"Number of product IDs: {len(naar_rugs_product_ids)}")
-
+    
+    # Define the date range
+    start_date = datetime.now().date() - timedelta(days=30)
+    end_date = datetime.now().date() - timedelta(days=1)
+    logger.info(f"Fetching Naar Rugs Asins's Data: {start_date} to {end_date}")
     # SQL query to fetch the price tracker data for the specified marketplace and date range
     placeholders = ', '.join(['%s'] * len(naar_rugs_product_ids))
     query = f"""
     SELECT "report_created_at", "product_id", "price", "open_date"
     FROM "selling_partner_api"."merchant_listing_report"
     WHERE "product_id" IN ({placeholders})
-    AND "report_created_at" >= CURRENT_DATE - INTERVAL '{days} days';
+    AND "report_created_at" BETWEEN {start_date} AND {end_date}
+    ORDER BY "report_created_at" DESC;
     """
 
     # Execute the query
     params = list(naar_rugs_product_ids) 
     cursor.execute(query, params)
-    logger.info("Executed price tracker query to fetch Naar Rugs Product Prices successfully.")
+    logger.info(f"Executed price tracker query to fetch Naar Rugs Product Prices successfully.")
 
     # Fetch results and load them into a DataFrame
     df = pd.DataFrame(cursor.fetchall(), columns=[desc[0] for desc in cursor.description])
     
     df.rename(columns= {"product_id" : "asin", "report_created_at" : "date"}, inplace=True)
+    logger.info(f"Fetched Naar Rugs Product Prices successfully : {df.shape}")
+    logger.info(f"Sample data for price tracker data : {df.head()}")
     logger.info(f"Renamed product_id to asin and report_created_at to date: {df.shape}")
     
     df['date'] = pd.to_datetime(df['date'])

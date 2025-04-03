@@ -634,7 +634,7 @@ def save_to_s3(df, brand, file_name):
     except Exception as e:
         logger.error(f"Failed to save {file_name} to S3: {e}")
 
-def fetch_price_tracker_data(marketplace, days=30):
+def fetch_price_tracker_data():
     """
     This function fetches price tracking data for a given marketplace from the last `days` days,
     loads it into a DataFrame, and saves the result as a CSV file.
@@ -1083,9 +1083,9 @@ def fetch_price_tracker_data(marketplace, days=30):
     # SQL query to fetch the price tracker data for the specified marketplace and date range
     placeholders = ', '.join(['%s'] * len(naar_rugs_product_ids))
     query = f"""
-    SELECT "report_created_at", "product_id", "price", "open_date"
+    SELECT "report_created_at", "asin1", "price", "open_date"
     FROM "selling_partner_api"."merchant_listing_report"
-    WHERE "product_id" IN ({placeholders})
+    WHERE "asin1" IN ({placeholders})
     AND "report_created_at" BETWEEN %s AND %s
     ORDER BY "report_created_at" DESC;
     """
@@ -1098,7 +1098,7 @@ def fetch_price_tracker_data(marketplace, days=30):
     # Fetch results and load them into a DataFrame
     df = pd.DataFrame(cursor.fetchall(), columns=[desc[0] for desc in cursor.description])
     
-    df.rename(columns= {"product_id" : "asin", "report_created_at" : "date"}, inplace=True)
+    df.rename(columns= {"asin1" : "asin", "report_created_at" : "date"}, inplace=True)
     logger.info(f"Fetched Naar Rugs Product Prices successfully : {df.shape}")
     logger.info(f"Sample data for price tracker data : {df.head()}")
     logger.info(f"Renamed product_id to asin and report_created_at to date: {df.shape}")
@@ -1513,7 +1513,7 @@ if __name__ == '__main__':
     processed_serp_df = pre_processing_serp_data(merged_df)
 
     #Step 4
-    price_tracker_df = fetch_price_tracker_data(marketplace="Amazon", days=30)
+    price_tracker_df = fetch_price_tracker_data()
 
     #Step 5
     merged_naar_rugs_df = fetch_product_information(price_tracker_df)

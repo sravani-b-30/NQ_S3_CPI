@@ -341,7 +341,7 @@ def fetch_serp_data(keyword_ids_df):
 
     # Define the date range
     start_date = datetime.now().date() - timedelta(days=30)
-    end_date = datetime.now().date() - timedelta(days=1)
+    end_date = datetime.now().date()
     logger.info(f"Fetching SERP data from {start_date} to {end_date}")
 
     # Initialize an empty list to collect dataframes
@@ -1078,7 +1078,7 @@ def fetch_price_tracker_data():
     
     # Define the date range
     start_date = datetime.now().date() - timedelta(days=30)
-    end_date = datetime.now().date() - timedelta(days=1)
+    end_date = datetime.now().date()
     logger.info(f"Fetching Naar Rugs Asins's Data: {start_date} to {end_date}")
     # SQL query to fetch the price tracker data for the specified marketplace and date range
     placeholders = ', '.join(['%s'] * len(naar_rugs_product_ids))

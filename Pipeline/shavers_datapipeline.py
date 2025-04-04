@@ -964,7 +964,9 @@ if __name__ == '__main__':
                     beard trimmer
                     mens clipper
                     mens trimmer
-                    mens shave"""
+                    mens shaver
+                    professional hair clipper
+                    zero cutting hair clipper"""
     keywords = keywords.split('\n')
     keywords = [keyword.strip() for keyword in keywords if keyword.strip()]
     logger.info(f"Keywords being passed to SERP : {keywords}")

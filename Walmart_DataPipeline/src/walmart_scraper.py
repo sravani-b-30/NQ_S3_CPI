@@ -9,12 +9,18 @@ from config import DEBUG, S3_BUCKET_NAME, S3_FOLDER, SMARTPROXY_API_KEY
 from s3_utils import fetch_product_details_from_s3, upload_file_to_s3
 
 PRODUCT_DETAILS_FILE = "MATTRESS_PRODUCT_DETAILS.csv"
+CDD_PRODUCT_DETAILS_FILE = "CALIFORNIA_DESIGN_DEN/CDD_PRODUCT_DETAILS.csv"
 
-def get_missing_products(final_df):
-    """Identify missing product IDs that need to be scraped."""
-    existing_products_df = fetch_product_details_from_s3(S3_BUCKET_NAME, S3_FOLDER, PRODUCT_DETAILS_FILE)
-    logger.info(f"Loaded existing product details from S3: {PRODUCT_DETAILS_FILE}")
-    logger.info(f"Existing Product Details DataFrame Shape: {existing_products_df.shape}")
+def get_missing_products(final_df, brand='NapQueen'):
+    """Identify missing product IDs that need to be scraped.""" 
+    if brand == 'NapQueen':
+        existing_products_df = fetch_product_details_from_s3(S3_BUCKET_NAME, S3_FOLDER, PRODUCT_DETAILS_FILE)
+        logger.info(f"Loaded existing product details from S3: {PRODUCT_DETAILS_FILE}")
+        logger.info(f"Existing Product Details DataFrame Shape: {existing_products_df.shape}")
+    elif brand == 'California Design Den':
+        existing_products_df = fetch_product_details_from_s3(S3_BUCKET_NAME, S3_FOLDER, CDD_PRODUCT_DETAILS_FILE)
+        logger.info(f"Loaded existing product details from S3: {CDD_PRODUCT_DETAILS_FILE}")
+        logger.info(f"Existing Product Details DataFrame Shape: {existing_products_df.shape}")
 
     if existing_products_df.empty:
         logger.warning("Existing product details file is empty or missing. All products need to be scraped.")
@@ -174,9 +180,9 @@ def clean_scraped_data(scraped_df):
     return cleaned_scraped_df
 
 
-def process_and_update_product_details(final_df):
+def process_and_update_product_details(final_df , brand='NapQueen'):
     """Fetch existing product details from S3, scrape missing products, update and upload back to S3."""
-    missing_product_ids, existing_products_df = get_missing_products(final_df)
+    missing_product_ids, existing_products_df = get_missing_products(final_df, brand=brand)
     if not missing_product_ids:
         logger.info("No new products to scrape. Exiting process.")
         return
@@ -189,8 +195,12 @@ def process_and_update_product_details(final_df):
     
     # Upload the updated DataFrame back to S3
     try:
-        upload_file_to_s3(product_details_df, S3_BUCKET_NAME, S3_FOLDER, PRODUCT_DETAILS_FILE)
-        logger.info(f"Successfully uploaded updated product details to S3: {PRODUCT_DETAILS_FILE}")
+        if brand == 'NapQueen':
+            upload_file_to_s3(product_details_df, S3_BUCKET_NAME, S3_FOLDER, PRODUCT_DETAILS_FILE)
+            logger.info(f"Successfully uploaded updated product details to S3: {PRODUCT_DETAILS_FILE}")
+        elif brand == 'California Design Den':
+            upload_file_to_s3(product_details_df, S3_BUCKET_NAME, S3_FOLDER, CDD_PRODUCT_DETAILS_FILE)
+            logger.info(f"Successfully uploaded updated product details to S3: {CDD_PRODUCT_DETAILS_FILE}")
     except Exception as e:
         logger.error(f"Error uploading product details file to S3 in walmart_scraper.py : {e}")
         

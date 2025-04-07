@@ -1,7 +1,7 @@
 import pandas as pd
 from datetime import datetime
 from logger import logger
-from config import S3_BUCKET_NAME , S3_FOLDER
+from config import S3_BUCKET_NAME , S3_FOLDER, BRAND_SELECTION
 from db_utils import get_postgres_connection_ads_query, close_postgres_connection
 from data_fetching import fetch_serpkeywords_mongodb, fetch_keyword_mappings, fetch_search_results, fetch_product_information, fetch_napqueen_products, fetch_nq_product_information
 from data_processing import preprocess_serp_data, perform_monthly_analysis, clean_napqueen_data
@@ -162,14 +162,9 @@ def get_brand_selection():
     logger.info("1. NapQueen")
     logger.info("2. California Design Den Inc.")
     
-    choice = input("Enter 1 or 2: ").strip()
-    if choice == "1":
-        return "NapQueen"
-    elif choice == "2":
-        return "California Design Den Inc."
-    else:
-        logger.info("Invalid choice. Defaulting to NapQueen.")
-        return "NapQueen"
+    choice = BRAND_SELECTION
+    logger.info(f"User selected brand: {choice}")
+    return choice
 
 
 def main():

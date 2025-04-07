@@ -39,8 +39,10 @@ SMARTPROXY_API_KEY = os.getenv("SMARTPROXY_API_KEY", "").strip('"')
 # Debugging Mode
 DEBUG = os.getenv("DEBUG", "True").lower() == "true"
 
+BRAND_SELECTION = os.getenv("BRAND_SELECTION", "1").strip('"')
+
 # Ensure critical environment variables are set
-required_env_vars = ["MONGO_URI", "DATABASE_NAME","DB_HOST","DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD", "SMARTPROXY_API_KEY"]
+required_env_vars = ["MONGO_URI", "DATABASE_NAME","DB_HOST","DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD", "SMARTPROXY_API_KEY", "BRAND_SELECTION"]
 for var in required_env_vars:
     if not os.getenv(var):
         raise ValueError(f"Missing required environment variable: {var}")

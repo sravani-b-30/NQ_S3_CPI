@@ -82,33 +82,60 @@ def perform_monthly_analysis(merged_df, days=60):
         logger.error(f"Error in performing monthly analysis in data_processing.py: {e}")
         raise e
 
-def clean_napqueen_data(nq_merged_df, merged_df):
+def clean_napqueen_data(nq_merged_df, merged_df , brand='NapQueen'):
     """
     Cleans and merges NapQueen data with SERP dataset.
     """
-    try:
-        nq_merged_df.rename(columns={'walmart_id': 'id'}, inplace=True)
-        full_column_order = [
-            'id', 'product_title', 'listingPrice', 'brand', 'rank', 
-            'organic_search_rank', 'sponsored_search_rank', 'keyword', 'keyword_id', 'date', 'channel_type'
-        ]
-        for col in full_column_order:
-            if col not in nq_merged_df.columns:
-                nq_merged_df[col] = None
-        
-        nq_merged_df = nq_merged_df.reindex(columns=full_column_order)
-        nq_merged_df.rename(columns={'listingPrice': 'price'}, inplace=True)
-        logger.info(f"Reordered columns of NapQueen Dataset to match with SERP Dataset : {nq_merged_df.columns}")
-        
-        logger.info(f"No.of rows in SERP Dataset before excluding NapQueen Products : {merged_df.shape}")
-        merged_df = merged_df[merged_df['brand'] != 'napqueen']
-        logger.info(f"Filtered SERP Dataset after excluding NapQueen products : {merged_df.shape}")
+    if brand == 'NapQueen':
+        try:
+            nq_merged_df.rename(columns={'walmart_id': 'id'}, inplace=True)
+            full_column_order = [
+                'id', 'product_title', 'listingPrice', 'brand', 'rank', 
+                'organic_search_rank', 'sponsored_search_rank', 'keyword', 'keyword_id', 'date', 'channel_type'
+            ]
+            for col in full_column_order:
+                if col not in nq_merged_df.columns:
+                    nq_merged_df[col] = None
+            
+            nq_merged_df = nq_merged_df.reindex(columns=full_column_order)
+            nq_merged_df.rename(columns={'listingPrice': 'price'}, inplace=True)
+            logger.info(f"Reordered columns of NapQueen Dataset to match with SERP Dataset : {nq_merged_df.columns}")
+            
+            logger.info(f"No.of rows in SERP Dataset before excluding NapQueen Products : {merged_df.shape}")
+            merged_df = merged_df[merged_df['brand'] != 'napqueen']
+            logger.info(f"Filtered SERP Dataset after excluding NapQueen products : {merged_df.shape}")
 
-        final_df = pd.concat([merged_df, nq_merged_df], ignore_index=True)
-        
-        logger.info(f"NapQueen data cleaned and appended with SERP Data: {final_df.shape}")
-        logger.info("Step 9 : Cleaning NapQueen data and appending with SERP data completed successfully")
-        return final_df
-    except Exception as e:
-        logger.error(f"Error in cleaning NapQueen data in data_processing.py: {e}")
-        raise e 
+            final_df = pd.concat([merged_df, nq_merged_df], ignore_index=True)
+            
+            logger.info(f"NapQueen data cleaned and appended with SERP Data: {final_df.shape}")
+            logger.info("Step 9 : Cleaning NapQueen data and appending with SERP data completed successfully")
+            return final_df
+        except Exception as e:
+            logger.error(f"Error in cleaning NapQueen data in data_processing.py: {e}")
+            raise e 
+    elif brand == 'California Design Den':
+        try:
+            nq_merged_df.rename(columns={'walmart_id': 'id'}, inplace=True)
+            full_column_order = [
+                'id', 'product_title', 'price', 'brand', 'rank', 
+                'organic_search_rank', 'sponsored_search_rank', 'keyword', 'keyword_id', 'date'
+            ]
+            for col in full_column_order:
+                if col not in nq_merged_df.columns:
+                    nq_merged_df[col] = None
+            
+            nq_merged_df = nq_merged_df.reindex(columns=full_column_order)
+            logger.info(f"Reordered columns of CDD Dataset to match with SERP Dataset : {nq_merged_df.columns}")
+            
+            logger.info(f"No.of rows in SERP Dataset before excluding CDD Products : {merged_df.shape}")
+            merged_df = merged_df[merged_df['brand'] != 'California Design Den']
+            logger.info(f"Filtered SERP Dataset after excluding CDD products : {merged_df.shape}")
+
+            final_df = pd.concat([merged_df, nq_merged_df], ignore_index=True)
+            
+            logger.info(f"CDD data cleaned and appended with SERP Data: {final_df.shape}")
+            logger.info("Step 9 : Cleaning CDD data and appending with SERP data completed successfully")
+            return final_df
+        except Exception as e:
+            logger.error(f"Error in cleaning CDD data in data_processing.py: {e}")
+            raise e

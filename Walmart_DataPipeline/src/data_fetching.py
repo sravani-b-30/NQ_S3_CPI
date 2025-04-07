@@ -1,5 +1,5 @@
 import pandas as pd
-from db_utils import get_postgres_connection, get_mongo_client, close_postgres_connection, close_mongo_client
+from db_utils import get_postgres_connection, get_mongo_client, get_postgres_connection_ads_query, close_postgres_connection, close_mongo_client
 from logger import logger
 from datetime import datetime, timedelta
 
@@ -145,88 +145,142 @@ def fetch_product_information(serp_df):
     finally:
         close_postgres_connection(conn)
 
-def fetch_napqueen_products(marketplace='Walmart'):
+def fetch_napqueen_products(marketplace='Walmart', brand='NapQueen'):
     """Fetch NapQueen product data from PostgreSQL."""
     conn = get_postgres_connection()
-    try:
-        with open('Walmart_DataPipeline/src/napqueen_product_ids.txt', 'r') as file:
-            product_ids = [line.strip() for line in file if line.strip()]
-        
-        placeholders = ', '.join(['%s'] * len(product_ids))
-        query = f"""
-        SELECT "Date", "MarketPlace", "product_ID", availability, "listingPrice", "listPrice", "landedPrice", "shippingPrice",
-          "size", "thickness", "channel_type"
-        FROM "Records"."PriceTracker"
-        WHERE "MarketPlace" = %s
-        AND "product_ID" IN ({placeholders})
-        AND "Date" BETWEEN %s AND %s;
-        """
+    if brand == 'NapQueen':
+        try:
+            with open('Walmart_DataPipeline/src/napqueen_product_ids.txt', 'r') as file:
+                product_ids = [line.strip() for line in file if line.strip()]
+            
+            placeholders = ', '.join(['%s'] * len(product_ids))
+            query = f"""
+            SELECT "Date", "MarketPlace", "product_ID", availability, "listingPrice", "listPrice", "landedPrice", "shippingPrice",
+            "size", "thickness", "channel_type"
+            FROM "Records"."PriceTracker"
+            WHERE "MarketPlace" = %s
+            AND "product_ID" IN ({placeholders})
+            AND "Date" BETWEEN %s AND %s;
+            """
 
-        end_date = datetime.now().date()
-        start_date = end_date - timedelta(days=30)
+            end_date = datetime.now().date()
+            start_date = end_date - timedelta(days=30)
 
-        with conn.cursor() as cursor:
-            # Execute the query with the date range
-            params = [marketplace] + list(product_ids) + [start_date, end_date]
-            cursor.execute(query, params)
-            results = cursor.fetchall()
-            columns = [desc[0] for desc in cursor.description]
-        
-        nq_df = pd.DataFrame(results, columns=columns)
-        nq_df.rename(columns= {"product_ID" : "walmart_id", "Date" : "date"}, inplace=True)
-        logger.info(f"Renamed product_ID to walmart_id and Date to date : {nq_df.shape}")
-        # serp_df = serp_df.groupby(['id', 'date']).tail(1)
-        
-        nq_df = (
-            nq_df.groupby(['walmart_id', 'date'])
-            .apply(lambda group: group.drop_duplicates(subset=['listingPrice']))
-            .reset_index(drop=True)
-        )
+            with conn.cursor() as cursor:
+                # Execute the query with the date range
+                params = [marketplace] + list(product_ids) + [start_date, end_date]
+                cursor.execute(query, params)
+                results = cursor.fetchall()
+                columns = [desc[0] for desc in cursor.description]
+            
+            nq_df = pd.DataFrame(results, columns=columns)
+            nq_df.rename(columns= {"product_ID" : "walmart_id", "Date" : "date"}, inplace=True)
+            logger.info(f"Renamed product_ID to walmart_id and Date to date : {nq_df.shape}")
+            # serp_df = serp_df.groupby(['id', 'date']).tail(1)
+            
+            nq_df = (
+                nq_df.groupby(['walmart_id', 'date'])
+                .apply(lambda group: group.drop_duplicates(subset=['listingPrice']))
+                .reset_index(drop=True)
+            )
 
-        logger.info(f"Fetched NapQueen product data : {nq_df.shape}")
-        logger.info(f"Sample data after fetching NapQueen product data : {nq_df.head()}")
-        logger.info("Step 7 : Fetching NapQueen product data completed successfully")
+            logger.info(f"Fetched NapQueen product data : {nq_df.shape}")
+            logger.info(f"Sample data after fetching NapQueen product data : {nq_df.head()}")
+            logger.info("Step 7 : Fetching NapQueen product data completed successfully")
 
-        return nq_df
-    except Exception as e:
-        logger.error(f"Error fetching NapQueen product data in data_fetching.py: {e}")
-        raise e
-    finally:
-        close_postgres_connection(conn)
+            return nq_df
+        except Exception as e:
+            logger.error(f"Error fetching NapQueen product data in data_fetching.py: {e}")
+            raise e
+        finally:
+            close_postgres_connection(conn)
+    elif brand == 'California Design Den Inc.':
+        try:
+            conn = get_postgres_connection_ads_query()
+            with open('Walmart_DataPipeline/src/cdd_product_ids.txt', 'r') as file:
+                cdd_product_ids = [line.strip() for line in file if line.strip()]
+            
+            placeholders = ', '.join(['%s'] * len(cdd_product_ids))
+            query = f"""
+            SELECT "date", "catalogItemId", "availabilityStatus", "price", "catalogItemName" , "brandName"
+            FROM "walmart_connect"."insight_report"
+            WHERE "catalogItemId" IN ({placeholders})
+            AND "date" BETWEEN %s AND %s;
+            """
 
-def fetch_nq_product_information(nq_df):
+            end_date = datetime.now().date()
+            start_date = end_date - timedelta(days=30)
+
+            with conn.cursor() as cursor:
+                # Execute the query with the date range
+                params = list(cdd_product_ids) + [start_date, end_date]
+                cursor.execute(query, params)
+                results = cursor.fetchall()
+                columns = [desc[0] for desc in cursor.description]
+            
+            cdd_df = pd.DataFrame(results, columns=columns)
+            cdd_df.rename(columns= {"catalogItemId" : "walmart_id" , "catalogItemName" : "product_title" , "brandName" : "brand"}, inplace=True)
+            logger.info(f"Renamed catalogItemId to walmart_id and catalogItemName to product_title and brandName to brand : {cdd_df.shape}")
+            
+            cdd_df = (
+                cdd_df.groupby(['walmart_id', 'date'])
+                .apply(lambda group: group.drop_duplicates(subset=['price']))
+                .reset_index(drop=True)
+            )
+
+            logger.info(f"Fetched California Design Den product data : {cdd_df.shape}")
+            logger.info(f"Sample data after fetching California Design Den product data : {cdd_df.head()}")
+            logger.info("Step 7 : Fetching California Design Den product data completed successfully")
+
+            return cdd_df
+        except Exception as e:
+            logger.error(f"Error fetching California Design Den product data in data_fetching.py: {e}")
+            raise e
+        finally:
+            close_postgres_connection(conn)
+
+def fetch_nq_product_information(nq_df, brand='NapQueen'):
     """Fetch NapQueen product information and merge with NapQueen data."""
     conn = get_postgres_connection()
-    try:
-        nq_df = nq_df[['date', 'walmart_id', 'listingPrice', 'channel_type']]   
-        logger.info(f"Columns after filtering date, walmart_id and listingPrice : {nq_df.columns}")
+    if brand == 'NapQueen':
+        try:
+            nq_df = nq_df[['date', 'walmart_id', 'listingPrice', 'channel_type']]   
+            logger.info(f"Columns after filtering date, walmart_id and listingPrice : {nq_df.columns}")
 
-        walmart_ids = nq_df["walmart_id"].dropna().unique().tolist()
-        logger.info(f"Number of unique NapQueen Walmart IDs to fetch product info : {len(walmart_ids)}")
+            walmart_ids = nq_df["walmart_id"].dropna().unique().tolist()
+            logger.info(f"Number of unique NapQueen Walmart IDs to fetch product info : {len(walmart_ids)}")
 
-        placeholders = ', '.join(['%s'] * len(walmart_ids))
-        query = f"""
-        SELECT walmart_id, product_title, brand
-        FROM walmart_serp.product_information
-        WHERE walmart_id IN ({placeholders});
-        """
-        with conn.cursor() as cursor:
-            cursor.execute(query, tuple(walmart_ids))
-            results = cursor.fetchall()
-            columns = [desc[0] for desc in cursor.description]
-        
-        product_info_df = pd.DataFrame(results, columns=columns)
-        nq_df["walmart_id"] = nq_df["walmart_id"].astype(str)
-        product_info_df["walmart_id"] = product_info_df["walmart_id"].astype(str)
-        nq_merged_df = pd.merge(nq_df, product_info_df, on="walmart_id", how="left")
+            placeholders = ', '.join(['%s'] * len(walmart_ids))
+            query = f"""
+            SELECT walmart_id, product_title, brand
+            FROM walmart_serp.product_information
+            WHERE walmart_id IN ({placeholders});
+            """
+            with conn.cursor() as cursor:
+                cursor.execute(query, tuple(walmart_ids))
+                results = cursor.fetchall()
+                columns = [desc[0] for desc in cursor.description]
+            
+            product_info_df = pd.DataFrame(results, columns=columns)
+            nq_df["walmart_id"] = nq_df["walmart_id"].astype(str)
+            product_info_df["walmart_id"] = product_info_df["walmart_id"].astype(str)
+            nq_merged_df = pd.merge(nq_df, product_info_df, on="walmart_id", how="left")
 
-        logger.info(f"Merged product information with NapQueen Price Data : {nq_merged_df.shape}")
-        logger.info(f"Sample data after merging : {nq_merged_df.head()}")
-        logger.info("Step 8 : Merging the product information with the NapQueen Price data completed successfully.")
+            logger.info(f"Merged product information with NapQueen Price Data : {nq_merged_df.shape}")
+            logger.info(f"Sample data after merging : {nq_merged_df.head()}")
+            logger.info("Step 8 : Merging the product information with the NapQueen Price data completed successfully.")
 
-        return nq_merged_df
-    except Exception as e:
-        logger.error(f"Error fetching NapQueen product information in data_fetching.py: {e}")
-        raise e
-    finally:
-        close_postgres_connection(conn)
+            return nq_merged_df
+        except Exception as e:
+            logger.error(f"Error fetching NapQueen product information in data_fetching.py: {e}")
+            raise e
+        finally:
+            close_postgres_connection(conn)
+    elif brand == 'California Design Den Inc.':
+        try:
+            cdd_df = nq_df.copy()
+            logger.info(f"Columns after loading CDD data into product information fetching function : {cdd_df.columns}")
+            logger.info(f"Sample data after loading CDD data into product information fetching function : {cdd_df.head()}")
+        except Exception as e:
+            logger.error(f"Error fetching California Design Den product information in data_fetching.py: {e}")
+            raise e    

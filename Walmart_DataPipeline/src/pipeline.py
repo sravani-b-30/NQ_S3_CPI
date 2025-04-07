@@ -163,8 +163,15 @@ def get_brand_selection():
     logger.info("2. California Design Den Inc.")
     
     choice = BRAND_SELECTION
-    logger.info(f"User selected brand: {choice}")
-    return choice
+    
+    if choice == "1":
+        return "NapQueen"
+    elif choice == "2":
+        return "California Design Den Inc."
+    elif choice is None:
+        choice = input("Enter 1 for NapQueen or 2 for California Design Den: ").strip()
+    else:
+        raise ValueError("Invalid choice. Use '1' or '2'.")
 
 
 def main():

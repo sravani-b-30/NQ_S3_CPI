@@ -18,21 +18,29 @@ def get_missing_products(final_df, brand='NapQueen'):
         logger.info(f"Loaded existing product details from S3: {PRODUCT_DETAILS_FILE}")
         logger.info(f"Existing Product Details DataFrame Shape: {existing_products_df.shape}")
     elif brand == 'California Design Den':
-        existing_products_df = fetch_product_details_from_s3(S3_BUCKET_NAME, S3_FOLDER, CDD_PRODUCT_DETAILS_FILE)
-        logger.info(f"Loaded existing product details from S3: {CDD_PRODUCT_DETAILS_FILE}")
-        logger.info(f"Existing Product Details DataFrame Shape: {existing_products_df.shape}")
-
+        try:
+            existing_products_df = fetch_product_details_from_s3(S3_BUCKET_NAME, S3_FOLDER, CDD_PRODUCT_DETAILS_FILE)
+            logger.info(f"Loaded existing product details from S3: {CDD_PRODUCT_DETAILS_FILE}")
+            logger.info(f"Existing Product Details DataFrame Shape: {existing_products_df.shape}")
+        except FileNotFoundError:
+            logger.warning(f"File {CDD_PRODUCT_DETAILS_FILE} not found in S3. Creating a new file.")
+            existing_products_df = pd.DataFrame(columns=["ID", "URL", "SKU", "GTIN", "Title", "Rating", "Rating Count", "Seller ID", "Seller Name", "Currency", "Description", "Out of Stock", "Specifications","Price"])
+    else:
+        logger.error(f"Unsupported brand: {brand}")
+        raise ValueError(f"Unsupported brand: {brand}")
+    
     if existing_products_df.empty:
         logger.warning("Existing product details file is empty or missing. All products need to be scraped.")
-        return final_df["id"].astype(str).tolist()  # Return all product IDs
+        return final_df["id"].astype(str).tolist()#, pd.DataFrame()  
     
     existing_ids = set(existing_products_df['ID'].astype(str))
     new_ids = set(final_df['id'].astype(str))
-    
+
     missing_ids = list(new_ids - existing_ids)
     logger.info(f"Found {len(missing_ids)} missing product IDs to scrape.")
     
     return missing_ids, existing_products_df
+
 
 def scrape_walmart_product(product_url, product_id):
     """Scrape product details from Walmart using the Smartproxy API."""

@@ -281,6 +281,8 @@ def fetch_nq_product_information(nq_df, brand='NapQueen'):
             cdd_df = nq_df.copy()
             logger.info(f"Columns after loading CDD data into product information fetching function : {cdd_df.columns}")
             logger.info(f"Sample data after loading CDD data into product information fetching function : {cdd_df.head()}")
+
+            return cdd_df
         except Exception as e:
             logger.error(f"Error fetching California Design Den product information in data_fetching.py: {e}")
             raise e    

@@ -17,7 +17,7 @@ def get_missing_products(final_df, brand='NapQueen'):
         existing_products_df = fetch_product_details_from_s3(S3_BUCKET_NAME, S3_FOLDER, PRODUCT_DETAILS_FILE)
         logger.info(f"Loaded existing product details from S3: {PRODUCT_DETAILS_FILE}")
         logger.info(f"Existing Product Details DataFrame Shape: {existing_products_df.shape}")
-    elif brand == 'California Design Den':
+    elif brand == 'California Design Den Inc.':
         try:
             existing_products_df = fetch_product_details_from_s3(S3_BUCKET_NAME, S3_FOLDER, CDD_PRODUCT_DETAILS_FILE)
             logger.info(f"Loaded existing product details from S3: {CDD_PRODUCT_DETAILS_FILE}")

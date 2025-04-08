@@ -206,7 +206,7 @@ def process_and_update_product_details(final_df , brand='NapQueen'):
         if brand == 'NapQueen':
             upload_file_to_s3(product_details_df, S3_BUCKET_NAME, S3_FOLDER, PRODUCT_DETAILS_FILE)
             logger.info(f"Successfully uploaded updated product details to S3: {PRODUCT_DETAILS_FILE}")
-        elif brand == 'California Design Den':
+        elif brand == 'California Design Den Inc.':
             upload_file_to_s3(product_details_df, S3_BUCKET_NAME, S3_FOLDER, CDD_PRODUCT_DETAILS_FILE)
             logger.info(f"Successfully uploaded updated product details to S3: {CDD_PRODUCT_DETAILS_FILE}")
     except Exception as e:

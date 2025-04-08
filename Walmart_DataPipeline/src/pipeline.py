@@ -32,7 +32,7 @@ def product_details_merge(final_df, product_details_df, brand='NapQueen'):
                 file_name=f"merged_data_{today}.csv"
             )
             logger.info(f"Final merged data uploaded to S3 bucket {S3_BUCKET_NAME} in folder {S3_FOLDER} with file name merged_data_{today}.csv")
-        elif brand == 'California Design Den':
+        elif brand == 'California Design Den Inc.':
             upload_file_to_s3(
                 df=final_merged_df,
                 bucket_name=S3_BUCKET_NAME,
@@ -85,7 +85,7 @@ def ads_query(brand='NapQueen'):
                 AND total_sales_wmt.anarix_id::text = ad_sales_wmt.anarix_id
                 WHERE COALESCE(ad_sales_wmt.anarix_id, total_sales_wmt.anarix_id::text) = ANY (ARRAY['NAPQUEEN_1P'::text, 'NAPQUEEN_3P'::text]);
             """
-        elif brand == 'California Design Den':
+        elif brand == 'California Design Den Inc.':
             query = """
             SELECT COALESCE(ad_sales_wmt."Date", total_sales_wmt."Date") AS "Date",
                 COALESCE(ad_sales_wmt."Item Id", total_sales_wmt."Item ID"::character varying) AS item_id,
@@ -136,7 +136,7 @@ def ads_query(brand='NapQueen'):
                     file_name="napqueen_ads_data.csv"
                 )
                 logger.info(f"Ads data uploaded to S3 bucket {S3_BUCKET_NAME} in folder {S3_FOLDER} with file name napqueen_ads_data.csv")
-            elif brand == 'California Design Den':
+            elif brand == 'California Design Den Inc.':
                 upload_file_to_s3(
                     df=ads_df,
                     bucket_name=S3_BUCKET_NAME,

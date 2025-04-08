@@ -113,7 +113,7 @@ def clean_napqueen_data(nq_merged_df, merged_df , brand='NapQueen'):
         except Exception as e:
             logger.error(f"Error in cleaning NapQueen data in data_processing.py: {e}")
             raise e 
-    elif brand == 'California Design Den':
+    elif brand == 'California Design Den Inc.':
         try:
             nq_merged_df.rename(columns={'walmart_id': 'id'}, inplace=True)
             full_column_order = [

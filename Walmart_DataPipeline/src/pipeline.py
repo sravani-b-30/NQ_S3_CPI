@@ -209,6 +209,7 @@ def main():
 
     logger.info("Cleaning and Merging NapQueen Data and Preprocessed SERP Data...")
     final_df = clean_napqueen_data(nq_merged_df, merged_df , brand=brand)
+    logger.info(f"Final DataFrame shape after merging SERP and Product's data: {final_df.shape}")
     
     # Process and Update Product Details
     logger.info("Processing and Updating Product Details...")

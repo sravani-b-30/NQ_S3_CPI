@@ -205,7 +205,7 @@ def main():
     nq_df = fetch_napqueen_products(marketplace="Walmart", brand=brand)
 
     logger.info("Fetching NapQueen Product Information...")
-    nq_merged_df = fetch_nq_product_information(nq_df)
+    nq_merged_df = fetch_nq_product_information(nq_df, brand=brand)
 
     logger.info("Cleaning and Merging NapQueen Data and Preprocessed SERP Data...")
     final_df = clean_napqueen_data(nq_merged_df, merged_df , brand=brand)

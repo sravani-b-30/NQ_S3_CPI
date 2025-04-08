@@ -29,9 +29,9 @@ def get_missing_products(final_df, brand='NapQueen'):
         logger.error(f"Unsupported brand: {brand}")
         raise ValueError(f"Unsupported brand: {brand}")
     
-    if existing_products_df.empty:
-        logger.warning("Existing product details file is empty or missing. All products need to be scraped.")
-        return final_df["id"].astype(str).tolist()#, pd.DataFrame()  
+    # if existing_products_df.empty:
+    #     logger.warning("Existing product details file is empty or missing. All products need to be scraped.")
+    #     return final_df["id"].astype(str).tolist()#, pd.DataFrame()  
     
     existing_ids = set(existing_products_df['ID'].astype(str))
     new_ids = set(final_df['id'].astype(str))

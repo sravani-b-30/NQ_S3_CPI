@@ -41,6 +41,7 @@ def load_data_from_s3(category):
     response = s3.get_object(Bucket=bucket_name, Key=key)
     data = response["Body"].read()
     df = pd.read_csv(io.BytesIO(data), parse_dates=["date"])
+    df.rename(columns={'ASIN': 'asin', 'price': 'price', 'date': 'date'}, inplace=True)
     return df
 
 # ---------------------------------------

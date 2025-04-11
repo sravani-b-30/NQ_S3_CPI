@@ -317,6 +317,13 @@ def scrapper_handler(df, bucket_name, brand, file_name="CRAZY_CUPS_PRODUCT_DETAI
     else:
         logger.info("No new ASINs to scrape.")
 
+    # Read the updated CSV file into a DataFrame and return it.
+    if os.path.exists(file_name):
+        return pd.read_csv(file_name)
+    else:
+        logger.error("Scraped CSV file not found!")
+        return pd.DataFrame()
+
 
 
 if __name__ == '__main__':
@@ -329,7 +336,7 @@ if __name__ == '__main__':
 
     #Step 7
     file_path = "Pipeline/Crazy_Cups/Files/crazy_cups_asins.csv"
-    
+
     df_scrapped_info = scrapper_handler(
     df=pd.read_csv(file_path, on_bad_lines='skip'),
     bucket_name="anarix-cpi",
@@ -337,9 +344,10 @@ if __name__ == '__main__':
     file_name="CRAZY_CUPS_PRODUCT_DETAILS.csv"
     )
 
-    # Save the updated NAPQUEEN.csv to S3
+    # Read the scraped data from the CSV and save it to S3.
+    scraped_df = pd.read_csv("CRAZY_CUPS_PRODUCT_DETAILS.csv")
     save_to_s3(
-        df=df_scrapped_info,
+        df=scraped_df,
         brand=brand,
         file_name='CRAZY_CUPS_PRODUCT_DETAILS.csv'
     )

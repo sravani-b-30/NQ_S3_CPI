@@ -317,7 +317,6 @@ def scrapper_handler(df, bucket_name, brand, file_name="CRAZY_CUPS_PRODUCT_DETAI
     else:
         logger.info("No new ASINs to scrape.")
 
-    return df_scrapped_info
 
 
 if __name__ == '__main__':

@@ -329,7 +329,7 @@ if __name__ == '__main__':
     logger.info(f"Processing brand: {brand}")
 
     #Step 7
-    file_path = "Keyword-Relevancy-SOV\Files\crazy_cups_asins.csv"
+    file_path = "Pipeline/Crazy_Cups/Files/crazy_cups_asins.csv"
     
     df_scrapped_info = scrapper_handler(
     df=pd.read_csv(file_path, on_bad_lines='skip'),

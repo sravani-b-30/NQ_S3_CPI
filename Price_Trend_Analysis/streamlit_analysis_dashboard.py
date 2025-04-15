@@ -30,9 +30,9 @@ st.title("🛒 Amazon Product Price Change Analysis")
 def load_data_from_s3(category):
     bucket_name = "anarix-cpi"
     if category == "Mattress":
-        key = "ANALYSIS/Mattress_Category_Mar-Apr.csv"
+        key = "ANALYSIS/Mattress_Category_Mar-Apr_updated.csv"
     else:
-        key = "ANALYSIS/Pet_Category_Mar-Apr.csv"
+        key = "ANALYSIS/Pet_Category_Mar-Apr_updated.csv"
 
     # Create S3 client
     s3 = boto3.client('s3')
@@ -92,10 +92,10 @@ category = st.selectbox("📂 Select Category", ["Mattress", "Pet Supplies"])
 df = load_data_from_s3(category)
 
 # Dates
-march_start = pd.to_datetime("2025-03-10")
+march_start = pd.to_datetime("2025-03-16")
 march_end = pd.to_datetime("2025-03-31")
 april_start = pd.to_datetime("2025-04-01")
-april_end = pd.to_datetime("2025-04-08")
+april_end = pd.to_datetime("2025-04-14")
 
 # Calculate
 march = calculate_price_change(df, march_start, march_end, "March")

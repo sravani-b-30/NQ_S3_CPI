@@ -6,6 +6,12 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor
+import boto3
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # ---------------------------
 # 1. Load Cross-Encoder Model
@@ -79,10 +85,10 @@ pairs_df['relevancy_score'] = scores
 search_query_df['startDate'] = pd.to_datetime(search_query_df['startDate'])
 search_query_df['endDate'] = pd.to_datetime(search_query_df['endDate'])
 
-print("\nSearch Query Data Loaded:\n")
-print(search_query_df.columns)
-print(search_query_df.head())
-print(search_query_df.info())
+logger.info("\nSearch Query Data Loaded:\n")
+logger.info(search_query_df.columns)
+logger.info(search_query_df.head())
+logger.info(search_query_df.info())
 
 week_bins = search_query_df[['startDate', 'endDate']].drop_duplicates().reset_index(drop=True)
 week_bins['startDate'] = pd.to_datetime(week_bins['startDate'])
@@ -106,10 +112,10 @@ pairs_df['endDate'] = pd.to_datetime(pairs_df['endDate'])
 weekly_rel_df = pairs_df.groupby(['asin', 'keyword', 'startDate', 'endDate']).agg({
     'relevancy_score': 'mean'
 }).reset_index()
-print("\nWeekly Relevancy Data:\n")
-print(weekly_rel_df.columns)
-print(weekly_rel_df.head())
-print(weekly_rel_df.info())
+logger.info("\nWeekly Relevancy Data:\n")
+logger.info(weekly_rel_df.columns)
+logger.info(weekly_rel_df.head())
+logger.info(weekly_rel_df.info())
 
 
 combined_df = pd.merge(weekly_rel_df, search_query_df,
@@ -141,8 +147,21 @@ combined_df['relevancy_bucket'] = combined_df.apply(classify, axis=1)
 # 8. Final Output
 # ---------------------------
 
-print("\nRelevancy Buckets for Tracked Keywords (Crazy Cups):\n")
-print(combined_df[['asin', 'keyword', 'relevancy_score', 'searchQueryScore', 'rel_score_norm', 'sqp_score_norm', 'relevancy_bucket']])
+logger.info("\nRelevancy Buckets for Tracked Keywords (Crazy Cups):\n")
+logger.info(combined_df[['asin', 'keyword', 'relevancy_score', 'searchQueryScore', 'rel_score_norm', 'sqp_score_norm', 'relevancy_bucket']])
 
 # Export if needed
 combined_df.to_csv("crazy_cups_keyword_relevancy.csv", index=False)
+
+client = boto3.client('s3')
+bucket_name = 'anarix-cpi'
+
+file_name = 'crazy_cups_keyword_relevancy.csv'
+s3_file_path = 'ANALYSIS/' + file_name
+
+# Upload to S3
+try:
+    client.upload_file(combined_df, bucket_name, s3_file_path)
+    logger.info(f"File {file_name} uploaded to S3 bucket {bucket_name}.")
+except Exception as e:
+    logger.error(f"Error uploading file to S3: {e}")

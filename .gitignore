@@ -16,10 +16,3 @@ Pipeline\cpi_data_pipeline_v0.py
 Pipeline\testing.py
 Pipeline_LocalGDrive
 Pipeline\time_check.py
-Keyword-Relevancy-SOV\ams_data.py
-Keyword-Relevancy-SOV\cross-encoders_sqp.py
-Keyword-Relevancy-SOV\daily_keyword_relevancy_embeddings.py
-Keyword-Relevancy-SOV\daily_keyword_relevancy.py
-Keyword-Relevancy-SOV\keyword_relevancy_cross-encoders.py
-Keyword-Relevancy-SOV\Pipeline_Structure.txt
-Keyword-Relevancy-SOV\relevancy_sqp_merge.py

@@ -955,18 +955,36 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
 if __name__ == '__main__':
     multiprocessing.freeze_support()
 
-    brand = "SHAVERS"
+    brand = "BIOGROWTH"
     logger.info(f"Processing for brand: {brand}")
     # df = active_keyword_ids(brand)
 
-    keywords = """cordless beard trimmer
-                    body trimmer
-                    beard trimmer
-                    mens clipper
-                    mens trimmer
-                    mens shaver
-                    professional hair clipper
-                    zero cutting hair clipper"""
+    keywords = """plant fertilizer sticks
+                organic fertilizer
+                plant fertilizer
+                plant fertilizer for indoor potted plants
+                nitrogen fertilizer
+                liquid fertilizer for indoor plants
+                super thrive plant fertilizer
+                10-10-10 fertilizer
+                jobes fertilizer spikes
+                root tabs freshwater aquarium plant fertilizer
+                palm tree fertilizer
+                liquid fertilizer
+                houseplant fertilizer
+                urea fertilizer
+                christmas cactus fertilizer
+                osmocote slow release fertilizer
+                aquarium plant fertilizer
+                african violet fertilizer
+                succulent fertilizer
+                fertilizer for indoor plants
+                house plant fertilizer
+                bone meal fertilizer
+                orchid fertilizer
+                citrus fertilizer
+                indoor plant fertilizer
+                """
     keywords = keywords.split('\n')
     keywords = [keyword.strip() for keyword in keywords if keyword.strip()]
     logger.info(f"Keywords being passed to SERP : {keywords}")
@@ -994,8 +1012,8 @@ if __name__ == '__main__':
     updated_napqueen_df = scrapper_handler(
     df=final_combined_data,
     bucket_name="anarix-cpi",
-    brand="SHAVERS",
-    file_name="SHAVERS.csv"
+    brand="BIO_GROWTH",
+    file_name="BIOGROWTH.csv"
     )
 
     # Step 5: Merge with scrapped info for final output

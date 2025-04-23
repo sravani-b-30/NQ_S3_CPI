@@ -809,15 +809,15 @@ def scrapper_handler(df, bucket_name, brand, file_name="SHAVERS.csv", num_worker
     df_asins = df['asin'].unique().tolist()
     df_asins = [asin for asin in df_asins if asin.startswith('B')]
     
-    # try:
-    #     existing_df = fetch_latest_napqueen_file(bucket_name, brand, file_name)
-    #     total_collected = existing_df['ASIN'].tolist()
-    #     asins_to_remove = existing_df[existing_df['Option'] == '{}']['ASIN'].str.upper().unique().tolist()
-    #     total_collected = [asin for asin in total_collected if asin not in asins_to_remove]
-    #     logger.info("Loaded existing ASIN data from file.")
-    # except FileNotFoundError:
-    #     logger.warning(f"File not found: {file_name}. Starting with an empty list.")
-    total_collected = []
+    try:
+        existing_df = fetch_latest_napqueen_file(bucket_name, brand, file_name)
+        total_collected = existing_df['ASIN'].tolist()
+        asins_to_remove = existing_df[existing_df['Option'] == '{}']['ASIN'].str.upper().unique().tolist()
+        total_collected = [asin for asin in total_collected if asin not in asins_to_remove]
+        logger.info("Loaded existing ASIN data from file.")
+    except FileNotFoundError:
+        logger.warning(f"File not found: {file_name}. Starting with an empty list.")
+        total_collected = []
 
     asins = [asin for asin in df_asins if asin not in total_collected]
 
@@ -838,22 +838,22 @@ def scrapper_handler(df, bucket_name, brand, file_name="SHAVERS.csv", num_worker
         try:
             parallel_scrape(asins, num_workers, file_name)
 
-    #         # Load the updated local file after scraping
-    #         scraped_data = pd.read_csv(file_name, on_bad_lines='skip')
-    #         updated_df = pd.concat([existing_df, scraped_data], ignore_index=True)
-    #         logger.info("Scraping completed and data appended to the S3 file.")
-    #     except Exception as e:
-    #         logger.error(f"Error during parallel scraping: {e}")
-    #         updated_df = existing_df  # Use existing data if scraping fails
-    # else:
-    #     logger.info("No new ASINs to scrape.")
-    #     updated_df = existing_df
-            updated_df = pd.read_csv(file_name, on_bad_lines='skip')
-            logger.info("Scraping completed successfully.")
+            # Load the updated local file after scraping
+            scraped_data = pd.read_csv(file_name, on_bad_lines='skip')
+            updated_df = pd.concat([existing_df, scraped_data], ignore_index=True)
+            logger.info("Scraping completed and data appended to the S3 file.")
         except Exception as e:
             logger.error(f"Error during parallel scraping: {e}")
+            updated_df = existing_df  # Use existing data if scraping fails
     else:
         logger.info("No new ASINs to scrape.")
+        updated_df = existing_df
+    #         updated_df = pd.read_csv(file_name, on_bad_lines='skip')
+    #         logger.info("Scraping completed successfully.")
+    #     except Exception as e:
+    #         logger.error(f"Error during parallel scraping: {e}")
+    # else:
+    #     logger.info("No new ASINs to scrape.")
 
     # Save the updated DataFrame to S3
     save_to_s3(
@@ -955,36 +955,18 @@ def process_and_upload_analysis(bucket_name, new_analysis_df, brand, prefix="mer
 if __name__ == '__main__':
     multiprocessing.freeze_support()
 
-    brand = "BIOGROWTH"
+    brand = "SHAVERS"
     logger.info(f"Processing for brand: {brand}")
     # df = active_keyword_ids(brand)
 
-    keywords = """plant fertilizer sticks
-                organic fertilizer
-                plant fertilizer
-                plant fertilizer for indoor potted plants
-                nitrogen fertilizer
-                liquid fertilizer for indoor plants
-                super thrive plant fertilizer
-                10-10-10 fertilizer
-                jobes fertilizer spikes
-                root tabs freshwater aquarium plant fertilizer
-                palm tree fertilizer
-                liquid fertilizer
-                houseplant fertilizer
-                urea fertilizer
-                christmas cactus fertilizer
-                osmocote slow release fertilizer
-                aquarium plant fertilizer
-                african violet fertilizer
-                succulent fertilizer
-                fertilizer for indoor plants
-                house plant fertilizer
-                bone meal fertilizer
-                orchid fertilizer
-                citrus fertilizer
-                indoor plant fertilizer
-                """
+    keywords = """cordless beard trimmer
+                    body trimmer
+                    beard trimmer
+                    mens clipper
+                    mens trimmer
+                    mens shaver
+                    professional hair clipper
+                    zero cutting hair clipper"""
     keywords = keywords.split('\n')
     keywords = [keyword.strip() for keyword in keywords if keyword.strip()]
     logger.info(f"Keywords being passed to SERP : {keywords}")
@@ -1012,8 +994,8 @@ if __name__ == '__main__':
     updated_napqueen_df = scrapper_handler(
     df=final_combined_data,
     bucket_name="anarix-cpi",
-    brand="BIO_GROWTH",
-    file_name="BIOGROWTH.csv"
+    brand="SHAVERS",
+    file_name="SHAVERS.csv"
     )
 
     # Step 5: Merge with scrapped info for final output

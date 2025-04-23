@@ -285,7 +285,8 @@ def active_keyword_ids(brand):
         57621727790771: "LAVA_SELLER",
         4481174563638304: "SFX_SELLER",
         629997099631956: "NAPQUEEN",
-        998654473666848: "SETTON_FARMS"
+        998654473666848: "SETTON_FARMS",
+        960757576748081: "BIOGROWTH_ORGANICS"
     }
 
     try:
@@ -382,7 +383,7 @@ def fetch_serp_data(updated_df):
     cursor = conn.cursor()
 
     end_date = datetime.now().date()
-    start_date = end_date - timedelta(days=1)
+    start_date = end_date - timedelta(days=6)
 
     logger.info(f"Fetching SERP data from {start_date} to {end_date}")
     
@@ -461,7 +462,7 @@ def fetch_and_enrich_price_data_by_date_range():
         conn = pg8000.connect(**DB_CONFIG)
         cursor = conn.cursor()
         query = """
-        SELECT date, product_id, asin, product_title, brand, price, availability, keyword_id, keyword
+        SELECT date, product_id, asin, product_title, brand, price, availability, keyword_id, keyword, backfilled
         FROM serp.sp_api_price_collector
         WHERE date BETWEEN %s AND %s;
         """
@@ -486,7 +487,7 @@ def align_and_combine_serp_and_sp_api_data(serp_data, sp_api_data):
     """
     Combines SERP and SP API data, aligns columns, and deduplicates by ASIN and date.
     """
-    required_columns = ['asin', 'product_id', 'keyword_id', 'product_title', 'brand', 'price', 'keyword', 'date']
+    required_columns = ['asin', 'product_id', 'keyword_id', 'product_title', 'brand', 'price', 'keyword', 'date', 'backfilled']
     for col in required_columns:
         if col not in serp_data.columns:
             serp_data[col] = None
@@ -1043,7 +1044,7 @@ if __name__ == '__main__':
     df_product_data = fetch_and_merge_product_data(df_serp)
 
     end_date = datetime.now().date()
-    start_date = end_date - timedelta(days=1)
+    start_date = end_date - timedelta(days=6)
     sp_api_data = fetch_and_enrich_price_data_by_date_range()
 
     final_combined_data = align_and_combine_serp_and_sp_api_data(df_product_data, sp_api_data)

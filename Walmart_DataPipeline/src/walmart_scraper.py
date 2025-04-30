@@ -8,7 +8,7 @@ from logger import logger
 from config import DEBUG, S3_BUCKET_NAME, S3_FOLDER, SMARTPROXY_API_KEY
 from s3_utils import fetch_product_details_from_s3, upload_file_to_s3
 
-PRODUCT_DETAILS_FILE = "MATTRESS_PRODUCT_DETAILS.csv"
+PRODUCT_DETAILS_FILE = "NAPQUEEN/MATTRESS_PRODUCT_DETAILS.csv"
 CDD_PRODUCT_DETAILS_FILE = "CALIFORNIA_DESIGN_DEN/CDD_PRODUCT_DETAILS.csv"
 
 def get_missing_products(final_df, brand='NapQueen'):

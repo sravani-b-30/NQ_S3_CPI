@@ -24,7 +24,7 @@ def get_missing_products(final_df, brand='NapQueen'):
             logger.info(f"Existing Product Details DataFrame Shape: {existing_products_df.shape}")
         except FileNotFoundError:
             logger.warning(f"File {CDD_PRODUCT_DETAILS_FILE} not found in S3. Creating a new file.")
-            existing_products_df = pd.DataFrame(columns=["ID", "URL", "SKU", "GTIN", "Title", "Rating", "Rating Count", "Seller ID", "Seller Name", "Currency", "Description", "Out of Stock", "Specifications","Price"])
+            existing_products_df = pd.DataFrame(columns=["ID", "URL", "SKU", "GTIN","Price","Title", "Rating", "Rating Count", "Seller ID", "Seller Name", "Currency", "Description", "Out of Stock", "Specifications"])
     else:
         logger.error(f"Unsupported brand: {brand}")
         raise ValueError(f"Unsupported brand: {brand}")

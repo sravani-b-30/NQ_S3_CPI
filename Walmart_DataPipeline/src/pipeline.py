@@ -29,7 +29,7 @@ def product_details_merge(final_df, product_details_df, brand='NapQueen'):
                 df=final_merged_df,
                 bucket_name=S3_BUCKET_NAME,
                 s3_folder=S3_FOLDER,
-                file_name=f"merged_data_{today}.csv"
+                file_name=f"NAPQUEEN/merged_data_{today}.csv"
             )
             logger.info(f"Final merged data uploaded to S3 bucket {S3_BUCKET_NAME} in folder {S3_FOLDER} with file name merged_data_{today}.csv")
         elif brand == 'California Design Den Inc.':
@@ -133,7 +133,7 @@ def ads_query(brand='NapQueen'):
                     df=ads_df,
                     bucket_name=S3_BUCKET_NAME,
                     s3_folder=S3_FOLDER,
-                    file_name="napqueen_ads_data.csv"
+                    file_name="NAPQUEEN/napqueen_ads_data.csv"
                 )
                 logger.info(f"Ads data uploaded to S3 bucket {S3_BUCKET_NAME} in folder {S3_FOLDER} with file name napqueen_ads_data.csv")
             elif brand == 'California Design Den Inc.':

@@ -261,10 +261,10 @@ def parallel_scrape(asins, num_processes, file_path):
             logger.info(f"Scraped and saved data for ASIN.")
 
 DB_CONFIG = {
-    "host": "postgresql-88164-0.cloudclusters.net",
+    "host": "208.110.93.71",
     "database": "generic",
-    "user": "Pgstest",
-    "password": "testwayfair",
+    "user": "u_sravini",
+    "password": "FQpwOET02Z58PwWOyPzd",
     "port": 10102,
 }
 
@@ -273,10 +273,10 @@ def active_keyword_ids(brand):
     Fetches active keyword IDs for a given brand from the database.
     """
     db_config = {
-        "host": "postgresql-88164-0.cloudclusters.net",
+        "host": "208.110.93.71",
         "database": "amazon",
-        "user": "Pgstest",
-        "password": "testwayfair",
+        "user": "u_sravini",
+        "password": "FQpwOET02Z58PwWOyPzd",
         "port": 10102
     }
 
@@ -318,10 +318,10 @@ def fetch_keyword_ids(df_keyword):
     keywords = df_keyword['keywordText'].to_list()
 
     db_config = {
-        "host": "postgresql-88164-0.cloudclusters.net",
+        "host": "208.110.93.71",
         "database": "generic",
-        "user": "Pgstest",
-        "password": "testwayfair",
+        "user": "u_sravini",
+        "password": "FQpwOET02Z58PwWOyPzd",
         "port": 10102
     }
 
@@ -372,10 +372,10 @@ def fetch_serp_data(updated_df):
     keyword_id_tuple = tuple(keyword_id_list)
 
     db_config = {
-        "host": "postgresql-88164-0.cloudclusters.net",
+        "host": "208.110.93.71",
         "database": "generic",
-        "user": "Pgstest",
-        "password": "testwayfair",
+        "user": "u_sravini",
+        "password": "FQpwOET02Z58PwWOyPzd",
         "port": 10102
     }
 
@@ -383,7 +383,7 @@ def fetch_serp_data(updated_df):
     cursor = conn.cursor()
 
     end_date = datetime.now().date()
-    start_date = end_date - timedelta(days=3)
+    start_date = end_date - timedelta(days=2)
 
     logger.info(f"Fetching SERP data from {start_date} to {end_date}")
     
@@ -618,10 +618,10 @@ def query_and_save_to_s3(brand):
     """
     # Establish connection to the database
     conn = pg8000.connect(
-        host="postgresql-88164-0.cloudclusters.net",
+        host="208.110.93.71",
         database="amazon",
-        user="Pgstest",
-        password="testwayfair",
+        user="u_sravini",
+        password="FQpwOET02Z58PwWOyPzd",
         port=10102
     )
     cursor = conn.cursor()
@@ -1044,7 +1044,7 @@ if __name__ == '__main__':
     df_product_data = fetch_and_merge_product_data(df_serp)
 
     end_date = datetime.now().date()
-    start_date = end_date - timedelta(days=3)
+    start_date = end_date - timedelta(days=2)
     sp_api_data = fetch_and_enrich_price_data_by_date_range()
 
     final_combined_data = align_and_combine_serp_and_sp_api_data(df_product_data, sp_api_data)

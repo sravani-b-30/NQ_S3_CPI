@@ -463,7 +463,7 @@ def fetch_and_enrich_price_data_by_date_range():
         cursor = conn.cursor()
         query = """
         SELECT date, product_id, asin, product_title, brand, price, availability, keyword_id, keyword, backfilled
-        FROM serp.sp_api_price_collector
+        FROM cpi.sp_api_test
         WHERE date BETWEEN %s AND %s;
         """
         cursor.execute(query, (start_date, end_date))
@@ -471,7 +471,7 @@ def fetch_and_enrich_price_data_by_date_range():
         price_data['date'] = pd.to_datetime(price_data['date']).dt.date
 
         logger.info(f"SP-API date column type : {price_data['date'].dtype}")
-        logger.info(f"Fetched data from sp_api_price_collector for the range {start_date} to {end_date}.")
+        logger.info(f"Fetched data from sp_api_test for the range {start_date} to {end_date}.")
         
         cursor.close()
         conn.close()

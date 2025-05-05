@@ -383,7 +383,7 @@ def fetch_serp_data(updated_df):
     cursor = conn.cursor()
 
     end_date = datetime.now().date()
-    start_date = end_date - timedelta(days=4)
+    start_date = end_date - timedelta(days=1)
 
     logger.info(f"Fetching SERP data from {start_date} to {end_date}")
     
@@ -1044,7 +1044,7 @@ if __name__ == '__main__':
     df_product_data = fetch_and_merge_product_data(df_serp)
 
     end_date = datetime.now().date()
-    start_date = end_date - timedelta(days=4)
+    start_date = end_date - timedelta(days=1)
     sp_api_data = fetch_and_enrich_price_data_by_date_range()
 
     final_combined_data = align_and_combine_serp_and_sp_api_data(df_product_data, sp_api_data)
